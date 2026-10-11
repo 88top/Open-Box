@@ -97,7 +97,7 @@
     <DialogWrapper
       v-model="showEditor"
       :title="$t(editing ? 'chainEditTitle' : 'chainAddTitle')"
-      box-class="w-full max-w-2xl"
+      box-class="w-full max-w-xl"
     >
       <div class="flex flex-col gap-4">
         <div class="flex flex-col gap-1">
