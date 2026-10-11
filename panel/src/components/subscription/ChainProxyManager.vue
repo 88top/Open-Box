@@ -99,7 +99,7 @@
       :title="$t(editing ? 'chainEditTitle' : 'chainAddTitle')"
       box-class="w-full max-w-xl"
     >
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-4 text-sm">
         <div class="flex flex-col gap-1">
           <label class="text-xs font-medium">{{ $t('chainProxyNameLabel') }}</label>
           <input
@@ -112,12 +112,12 @@
         </div>
 
         <!-- 节点:「链接」粘一条分享链接 / 节点配置;「字段」按住宅代理商表格里的账号一栏栏填,保存时拼成链接 -->
-        <div class="flex flex-col gap-2">
+        <div class="flex flex-col gap-1">
           <div class="flex items-center justify-between gap-2">
             <label class="text-xs font-medium">{{ $t('chainProxyLinkLabel') }}</label>
             <div
               role="tablist"
-              class="tabs-box tabs tabs-sm shrink-0"
+              class="tabs-box tabs tabs-xs w-fit"
             >
               <a
                 v-for="m in MODES"
@@ -135,16 +135,16 @@
               v-model="draft.link"
               rows="4"
               spellcheck="false"
-              class="textarea textarea-sm w-full font-mono text-xs"
+              class="textarea textarea-sm w-full font-mono"
               :placeholder="$t('chainProxyLinkPlaceholder')"
             />
             <p class="text-base-content/50 text-xs">{{ $t('chainProxyLinkHint') }}</p>
           </template>
           <template v-else>
-            <div class="flex flex-wrap gap-2 sm:flex-nowrap">
+            <div class="grid grid-cols-2 gap-2 sm:grid-cols-[7rem_1fr_6rem]">
               <select
                 v-model="fields.scheme"
-                class="select select-sm w-full shrink-0 sm:w-36"
+                class="select select-sm w-full"
               >
                 <option
                   v-for="s in SCHEMES"
@@ -156,24 +156,24 @@
                 v-model.trim="fields.host"
                 type="text"
                 spellcheck="false"
-                class="input input-sm min-w-0 flex-1 font-mono text-xs"
+                class="input input-sm w-full font-mono"
                 :placeholder="$t('chainProxyHostLabel')"
               />
               <input
                 v-model.trim="fields.port"
                 type="text"
                 inputmode="numeric"
-                class="input input-sm w-full shrink-0 font-mono text-xs sm:w-28"
+                class="input input-sm w-full font-mono"
                 :placeholder="$t('chainProxyPortLabel')"
               />
             </div>
-            <div class="grid gap-2 sm:grid-cols-2">
+            <div class="grid grid-cols-2 gap-2">
               <input
                 v-model="fields.username"
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
-                class="input input-sm w-full"
+                class="input input-sm w-full font-mono"
                 :placeholder="$t('chainProxyUserLabel')"
               />
               <input
@@ -181,7 +181,7 @@
                 type="text"
                 autocomplete="off"
                 spellcheck="false"
-                class="input input-sm w-full"
+                class="input input-sm w-full font-mono"
                 :placeholder="$t('chainProxyPassLabel')"
               />
             </div>
@@ -199,8 +199,9 @@
           <p class="text-base-content/50 text-xs">{{ $t('chainProxyHint') }}</p>
         </div>
 
-        <div class="flex flex-col gap-2">
-          <div>
+        <!-- 测速:结果和按钮同一行,出口信息只占一行小字 -->
+        <div class="flex flex-col gap-1">
+          <div class="flex flex-wrap items-center gap-2">
             <button
               type="button"
               class="btn btn-sm"
@@ -217,52 +218,54 @@
               />
               {{ $t('chainProxyTest') }}
             </button>
-          </div>
-          <div
-            v-if="testResult"
-            class="bg-base-200/60 flex flex-col gap-1 rounded-lg px-3 py-2 text-xs"
-          >
-            <div>
-              <span :class="testResult.ok ? 'text-success' : 'text-error'">
-                {{ testResult.ok ? $t('chainTestOk', { ms: testResult.ms ?? 0 }) : $t('chainTestFailed', { message: testResult.error || '' }) }}
-              </span>
+            <template v-if="testResult && !testing">
+              <span
+                v-if="testResult.ok"
+                class="font-medium"
+                :class="latencyClass(testResult.ms ?? 0)"
+              >{{ testResult.ms ?? 0 }} ms</span>
+              <span
+                v-else
+                class="text-error text-xs break-all"
+              >{{ $t('chainTestFailed', { message: testResult.error || '' }) }}</span>
               <span
                 v-if="testResult.via"
-                class="text-base-content/60"
-              > · {{ $t('chainTestVia', { via: testResult.via }) }}</span>
-            </div>
-            <div
-              v-if="ipSummary"
-              class="text-base-content/70 break-all"
-            >
-              {{ ipSummary }}
-            </div>
+                class="text-base-content/50 text-xs"
+              >{{ $t('chainTestVia', { via: testResult.via }) }}</span>
+            </template>
+          </div>
+          <div
+            v-if="testResult && !testing && ipSummary"
+            class="text-base-content/70 text-xs break-all"
+          >
+            {{ ipSummary }}
           </div>
           <p class="text-base-content/50 text-xs">{{ $t('chainProxyTestHint') }}</p>
         </div>
-
-        <div class="border-base-content/10 flex justify-end gap-2 border-t pt-3">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveDraft"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('subscriptionSave') }}
-          </button>
-        </div>
       </div>
+
+      <!-- 取消 / 保存放在弹窗底栏,和内容区分开 -->
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveDraft"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('subscriptionSave') }}
+        </button>
+      </template>
     </DialogWrapper>
 
     <DialogWrapper
@@ -512,6 +515,9 @@ const IP_URLS = [
 ]
 const ipUrls = () =>
   [...IP_URLS.filter((x) => x.api === IPInfoAPI.value), ...IP_URLS.filter((x) => x.api !== IPInfoAPI.value)].map((x) => x.url)
+
+// 延迟的颜色:越慢越偏红
+const latencyClass = (ms: number) => (ms < 300 ? 'text-success' : ms < 800 ? 'text-warning' : 'text-error')
 
 const runTest = async () => {
   if (testing.value) return
