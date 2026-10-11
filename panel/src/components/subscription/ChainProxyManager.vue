@@ -1,7 +1,22 @@
 <template>
-  <!-- 链式代理页(对齐 v0.1.311):没有标题卡片;空的时候居中放一个图标和「添加链式代理」按钮,
-       有内容时右上角一个添加按钮,下面是列表。 -->
+  <!-- 链式代理页(对齐 v0.1.311):没有标题卡片;添加按钮 Teleport 到顶部页签栏右上角的「+」
+       (和共享网络页一样);空的时候中间再放一个图标和「添加链式代理」按钮,否则直接是列表。 -->
   <div class="flex flex-col gap-2">
+    <Teleport
+      defer
+      to="#settings-header-actions"
+    >
+      <button
+        type="button"
+        class="btn btn-primary btn-circle btn-sm"
+        v-tip="$t('chainProxyAdd')"
+        :aria-label="$t('chainProxyAdd')"
+        @click="openEditor(null)"
+      >
+        <PlusIcon class="h-4 w-4" />
+      </button>
+    </Teleport>
+
     <div
       v-if="loading"
       class="flex justify-center py-16"
@@ -26,16 +41,6 @@
     </div>
 
     <template v-else>
-      <div class="flex justify-end">
-        <button
-          type="button"
-          class="btn btn-primary btn-sm"
-          @click="openEditor(null)"
-        >
-          <PlusIcon class="h-4 w-4" />
-          {{ $t('chainProxyAdd') }}
-        </button>
-      </div>
       <div class="card bg-base-100 border-base-300/60 border">
         <div class="card-body gap-2 p-4">
           <div
