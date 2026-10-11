@@ -2548,8 +2548,8 @@ packages:
     resolution: {integrity: sha512-VXJjc87FScF88uafS3JllDgvAm+c/Slfz06lorj2uAY34rlUu0Nt+v8wreiImcrgAjjIHp1rXpTDlLOGw29WwQ==}
     engines: {node: '>=18'}
 
-  open-box-panel@file:///private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel312/panel:
-    resolution: {directory: ../../../../../../../../private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel312/panel, type: directory}
+  open-box-panel@file:///private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel313/panel:
+    resolution: {directory: ../../../../../../../../private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel313/panel, type: directory}
 
   opencc-js@1.4.2:
     resolution: {integrity: sha512-EdcspgdROiCCZDM+jZR6Pa670xW+EW2QhctPBQ8gRjg6lrx4IHEl+2s+kt5izk/TkxVRgdWuFgaGkaEdIUfdaw==}
@@ -6207,7 +6207,7 @@ snapshots:
     dependencies:
       mimic-function: 5.0.1
 
-  open-box-panel@file:///private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel312/panel:
+  open-box-panel@file:///private/tmp/claude-501/-Users-ange-Code-Open-Box/5b07c864-21be-4b68-8976-769d05c0974a/scratchpad/rel313/panel:
     dependencies:
       '@eslint/plugin-kit': 0.6.0
       '@fontsource/fira-sans': 5.2.7
