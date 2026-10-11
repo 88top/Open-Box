@@ -98,11 +98,11 @@ interface Platform {
 }
 
 const SVG_ANDROID =
-  '<svg width="32" height="32" viewBox="0 0 24 24"><path fill="#3DDC84" d="M6.2 8a5.8 5.8 0 0 1 11.6 0zM6 9h12v9a1 1 0 0 1-1 1h-1v3a1.2 1.2 0 0 1-2.4 0v-3h-3.2v3A1.2 1.2 0 0 1 7.8 22v-3H7a1 1 0 0 1-1-1zM3.2 9.5a1.2 1.2 0 0 1 2.4 0v5a1.2 1.2 0 0 1-2.4 0zM18.4 9.5a1.2 1.2 0 0 1 2.4 0v5a1.2 1.2 0 0 1-2.4 0z"/><circle cx="9.5" cy="5" r=".8" fill="#fff"/><circle cx="14.5" cy="5" r=".8" fill="#fff"/></svg>'
+  '<svg width="32" height="32" viewBox="0 0 24 24"><path fill="none" stroke="#3DDC84" stroke-width="1.2" stroke-linecap="round" d="M7.5 6.5 9 9M16.5 6.5 15 9"/><path fill="#3DDC84" d="M2.5 19a9.5 9.5 0 0 1 19 0z"/><circle cx="8.3" cy="15" r="1" fill="#fff"/><circle cx="15.7" cy="15" r="1" fill="#fff"/></svg>'
 const SVG_LINUX =
-  '<svg width="32" height="32" viewBox="0 0 24 24"><ellipse cx="12" cy="13" rx="7" ry="9" fill="#222"/><ellipse cx="12" cy="15" rx="4.5" ry="6" fill="#fff"/><circle cx="9.8" cy="7.5" r="1.1" fill="#fff"/><circle cx="14.2" cy="7.5" r="1.1" fill="#fff"/><path d="M10.5 9.3h3L12 11z" fill="#F5B301"/><ellipse cx="8.5" cy="21.5" rx="2.5" ry="1.2" fill="#F5B301"/><ellipse cx="15.5" cy="21.5" rx="2.5" ry="1.2" fill="#F5B301"/></svg>'
+  '<svg width="32" height="32" viewBox="0 0 24 24"><ellipse cx="5.6" cy="14.5" rx="1.6" ry="4.2" fill="#1c1c1c" transform="rotate(14 5.6 14.5)"/><ellipse cx="18.4" cy="14.5" rx="1.6" ry="4.2" fill="#1c1c1c" transform="rotate(-14 18.4 14.5)"/><ellipse cx="12" cy="14" rx="6.3" ry="8" fill="#1c1c1c"/><ellipse cx="12" cy="7.4" rx="3.9" ry="4.4" fill="#1c1c1c"/><ellipse cx="12" cy="15.4" rx="3.9" ry="5.4" fill="#fff"/><ellipse cx="10.5" cy="6.6" rx="1.1" ry="1.3" fill="#fff"/><ellipse cx="13.5" cy="6.6" rx="1.1" ry="1.3" fill="#fff"/><circle cx="10.7" cy="6.8" r=".5" fill="#1c1c1c"/><circle cx="13.3" cy="6.8" r=".5" fill="#1c1c1c"/><ellipse cx="12" cy="9" rx="1.9" ry="1" fill="#F8BF11"/><ellipse cx="8.2" cy="21.4" rx="3" ry="1.3" fill="#F8BF11"/><ellipse cx="15.8" cy="21.4" rx="3" ry="1.3" fill="#F8BF11"/></svg>'
 const SVG_HARMONY =
-  '<svg width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="12" r="11" fill="#CE0E2D"/><path fill="#fff" d="M7.6 6h2.4v4.8h4V6h2.4v12h-2.4v-4.8h-4V18H7.6z"/></svg>'
+  '<svg width="32" height="32" viewBox="0 0 24 24"><circle cx="12" cy="10.5" r="7.5" fill="none" stroke="#6B7280" stroke-width="2.6"/><rect x="6.5" y="20.2" width="11" height="2.2" rx="1.1" fill="#6B7280"/></svg>'
 
 const PLATFORMS: Platform[] = [
   { key: 'android', name: 'Android', icon: 'brand:android', svg: SVG_ANDROID, release: 'android', requires: 'clientDownloadReqAndroid' },
