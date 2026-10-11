@@ -60,6 +60,16 @@
             v-model="IPv6test"
           />
         </div>
+        <div class="setting-item">
+          <div class="setting-item-label">
+            {{ $t('hideUnavailableProxies') }}
+          </div>
+          <input
+            class="toggle"
+            type="checkbox"
+            v-model="hideUnavailableProxies"
+          />
+        </div>
       </div>
     </template>
     <!-- 布局:代理组分几列(GitHub #10) -->
@@ -94,6 +104,7 @@
 import { useIsSettingVisible } from '@/composables/settings'
 import { PROXIES_ITEM_KEYS } from '@/config/settingsItems'
 import {
+  hideUnavailableProxies,
   IPv6test,
   lowLatency,
   mediumLatency,

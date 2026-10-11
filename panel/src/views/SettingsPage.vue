@@ -28,6 +28,13 @@
           >
             <component :is="item.component" />
           </div>
+          <!-- 测试站点:概览「站点延迟」测哪几个站,自成一张卡片,固定排在最后 -->
+          <div
+            id="item-testSites"
+            class="card"
+          >
+            <SiteLatencySettings />
+          </div>
         </div>
       </div>
     </div>
@@ -50,6 +57,7 @@
 import GeneralSettings from '@/components/settings/GeneralSettings.vue'
 import ProxiesSettings from '@/components/settings/ProxiesSettings.vue'
 import SettingsMenu from '@/components/settings/SettingsMenu.vue'
+import SiteLatencySettings from '@/components/settings/SiteLatencySettings.vue'
 import { usePaddingForViews } from '@/composables/paddingViews'
 import { isSettingVisible } from '@/composables/settings'
 import { SETTINGS_MENU_KEY, SETTINGS_TAB } from '@/constant'

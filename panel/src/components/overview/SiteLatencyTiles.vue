@@ -72,7 +72,7 @@
 <script setup lang="ts">
 import CountryFlag from '@/components/common/CountryFlag.vue'
 import {
-  SITES,
+  activeSites,
   autoSiteLatencyTest,
   loadSiteHistory,
   runSiteLatencyTest,
@@ -156,11 +156,11 @@ const effective = (delay: number) => (delay === NOT_CONNECTED ? siteTimeoutMs.va
 const visibleSamples = (id: string) => (siteHistory.value[id] ?? []).slice(-barCount(id))
 // 四个站点的柱子共用同一把尺:所有可见样本里最大的那个值算 100%
 const maxValue = computed(() =>
-  Math.max(1, ...SITES.flatMap((site) => visibleSamples(site.id).map((s) => effective(s.delay)))),
+  Math.max(1, ...activeSites.value.flatMap((site) => visibleSamples(site.id).map((s) => effective(s.delay)))),
 )
 
 const cards = computed(() =>
-  SITES.map((site) => {
+  activeSites.value.map((site) => {
     const result = siteResults.value[site.id]
     const history = siteHistory.value[site.id] ?? []
     const last = history.length ? history[history.length - 1] : null
