@@ -14,7 +14,7 @@
     </div>
     <p
       v-else-if="!rows.length"
-      class="text-base-content/50 text-sm"
+      class="text-base-content/50 text-xs"
     >
       {{ $t('clientAppShareEmpty') }}
     </p>
