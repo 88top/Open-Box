@@ -20,6 +20,7 @@ export const kernelSettingsZh = {
   timezoneSearch: '搜索时区,比如 Shanghai、中国、+08',
   timezoneSaveFailed: '修改时区失败:{message}',
   timezoneLoadFailed: '读取时区失败:{message}',
+  clientRouteEmptyTitle: '还没有终端规则。',
 }
 
 export const kernelSettingsZhTw = {
@@ -42,4 +43,5 @@ export const kernelSettingsZhTw = {
   timezoneSearch: '搜尋時區,例如 Shanghai、中國、+08',
   timezoneSaveFailed: '修改時區失敗:{message}',
   timezoneLoadFailed: '讀取時區失敗:{message}',
+  clientRouteEmptyTitle: '還沒有終端規則。',
 }

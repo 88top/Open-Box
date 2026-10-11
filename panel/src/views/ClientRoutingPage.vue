@@ -29,14 +29,14 @@
           <span class="loading loading-spinner loading-md" />
         </div>
 
-        <div
+        <EmptyAction
           v-else-if="!routes.length"
-          class="card"
+          :icon="DevicePhoneMobileIcon"
+          :action="$t('clientRouteAdd')"
+          @action="openCreate"
         >
-          <div class="app-card-inset text-base-content/50 text-sm">
-            {{ $t('clientRouteEmpty') }}
-          </div>
-        </div>
+          {{ $t('clientRouteEmptyTitle') }}
+        </EmptyAction>
 
         <!-- 拖拽排序:规则按这个顺序写进内核,先命中的先生效 -->
         <Draggable
@@ -127,10 +127,11 @@ import {
   type OpenboxUserGroup,
 } from '@/api/openbox'
 import ClientRouteEditDialog from '@/components/clients/ClientRouteEditDialog.vue'
+import EmptyAction from '@/components/common/EmptyAction.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { usePaddingForViews } from '@/composables/paddingViews'
 import { showNotification } from '@/helper/notification'
-import { Bars3Icon, PencilSquareIcon, PlusIcon, PowerIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { Bars3Icon, DevicePhoneMobileIcon, PencilSquareIcon, PlusIcon, PowerIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { computed, onMounted, ref, watch } from 'vue'
 import Draggable from 'vuedraggable'
 
