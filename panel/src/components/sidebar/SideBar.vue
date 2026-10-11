@@ -43,7 +43,6 @@
         <KernelActionButtons vertical />
       </template>
       <template v-else>
-        <OverviewCarousel v-if="route.name !== ROUTE_NAME.overview" />
         <CommonSidebar />
       </template>
     </div>
@@ -52,7 +51,7 @@
 
 <script setup lang="ts">
 import CommonSidebar from '@/components/sidebar/CommonCtrl.vue'
-import { ROUTE_ICON_MAP, ROUTE_NAME } from '@/constant'
+import { ROUTE_ICON_MAP } from '@/constant'
 import { renderRoutes } from '@/helper'
 import { useTooltip } from '@/helper/tooltip'
 import router from '@/router'
@@ -60,7 +59,6 @@ import { isSidebarCollapsed } from '@/store/settings'
 import { twMerge } from 'tailwind-merge'
 import { useI18n } from 'vue-i18n'
 import { useRoute } from 'vue-router'
-import OverviewCarousel from './OverviewCarousel.vue'
 import KernelActionButtons from './KernelActionButtons.vue'
 import SidebarHeader from './SidebarHeader.vue'
 
