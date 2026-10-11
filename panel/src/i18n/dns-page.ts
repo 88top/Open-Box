@@ -76,6 +76,7 @@ export const dnsPageZh = {
   dfAutoHint: '在选定时间更新一次;内核自己加载新名单,不重启。',
   dfRecordHint: '保留最近 24 小时,最多 20,000 条。记录经过 Open-Box 的 DNS 查询;dnsmasq 模式下 dnsmasq 自己答掉的也记,终端从 dnsmasq 的查询日志里认,认不出的标「路由器转发」。不含终端自己的缓存、旁路及不经过 Open-Box 的加密 DNS。',
   dfRouterSelf: '路由器自己',
+  dfDevice: '终端设备',
   dfCached: 'dnsmasq 缓存',
   dfLocal: 'dnsmasq 本地',
   dfDnsmasqAnswered: 'dnsmasq 直接应答',
@@ -160,6 +161,7 @@ export const dnsPageZhTw = {
   dfAutoHint: '在選定時間更新一次;核心自己載入新清單,不重啟。',
   dfRecordHint: '保留最近 24 小時,最多 20,000 條。記錄經過 Open-Box 的 DNS 查詢;dnsmasq 模式下 dnsmasq 自己答掉的也記,終端從 dnsmasq 的查詢日誌裡認,認不出的標「路由器轉送」。不含終端自己的快取、旁路及不經過 Open-Box 的加密 DNS。',
   dfRouterSelf: '路由器本身',
+  dfDevice: '終端裝置',
   dfCached: 'dnsmasq 快取',
   dfLocal: 'dnsmasq 本地',
   dfDnsmasqAnswered: 'dnsmasq 直接應答',
@@ -170,6 +172,7 @@ export const dnsPageZhTw = {
 export const dnsPageEn = {
   dfRecordHint: 'Last 24 hours, up to 20,000 records. Covers queries passing through Open-Box; in dnsmasq mode, answers served by dnsmasq itself are included and the device is taken from dnsmasq\'s query log (unidentified ones show as Router forwarding). Client caches, bypassed traffic and encrypted DNS outside Open-Box are not included.',
   dfRouterSelf: 'Router itself',
+  dfDevice: 'Device',
   dfCached: 'dnsmasq cache',
   dfLocal: 'dnsmasq local',
   dfDnsmasqAnswered: 'Answered by dnsmasq',

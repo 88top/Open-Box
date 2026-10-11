@@ -59,7 +59,7 @@
               <th>{{ $t('dfDomain') }}</th>
               <th>{{ $t('dfType') }}</th>
               <th>{{ $t('dfResult') }}</th>
-              <th>{{ $t('dfSource') }}</th>
+              <th>{{ $t('dfDevice') }}</th>
               <th>{{ $t('dfMatchedList') }}</th>
               <th>{{ $t('dfDuration') }}</th>
             </tr>
@@ -119,6 +119,7 @@
         v-model:page="page"
         v-model:page-size="pageSize"
         :total="total"
+        :page-sizes="[10, 20, 50, 100]"
         :disabled="loading"
         @change="load"
       />

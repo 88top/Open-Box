@@ -436,8 +436,12 @@ const poll = async () => {
     return
   }
   if (state.pending) {
-    detecting.value = true
-    if (++pollCount < 60) pollTimer = setTimeout(poll, 3000)
+    if (++pollCount < 60) {
+      detecting.value = true
+      pollTimer = setTimeout(poll, 3000)
+    } else {
+      detecting.value = false
+    }
     return
   }
   if (detecting.value || state.region !== region.value) {

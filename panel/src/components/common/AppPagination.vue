@@ -80,13 +80,14 @@ const props = withDefaults(
     total: number
     disabled?: boolean
     maxPageSize?: number
+    pageSizes?: number[]
   }>(),
-  { disabled: false, maxPageSize: 1000 },
+  { disabled: false, maxPageSize: 1000, pageSizes: () => [20, 50, 100] },
 )
 const page = defineModel<number>('page', { default: 1 })
 const pageSize = defineModel<number>('pageSize', { default: 20 })
 const emit = defineEmits<{ change: [value: { page: number; pageSize: number }] }>()
-const presets = computed(() => [20, 50, 100].filter((size) => size <= props.maxPageSize))
+const presets = computed(() => props.pageSizes.filter((size) => size <= props.maxPageSize))
 const pageCount = computed(() => Math.max(1, Math.ceil(props.total / Math.max(1, pageSize.value))))
 const currentPage = computed(() => Math.min(pageCount.value, Math.max(1, page.value)))
 const customSize = ref(!presets.value.includes(pageSize.value))
