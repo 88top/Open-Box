@@ -6,14 +6,14 @@
     >
       <div class="flex flex-col gap-2 px-2 md:py-2">
         <!-- 链式代理:上游是单独的一级页签,不再塞在「出站节点」里 -->
-        <ChainProxiesCard />
+        <ChainProxyManager />
       </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import ChainProxiesCard from '@/components/subscription/ChainProxiesCard.vue'
+import ChainProxyManager from '@/components/subscription/ChainProxyManager.vue'
 import { usePaddingForViews } from '@/composables/paddingViews'
 import { loadOpenboxNodeGroups } from '@/store/openboxSiteSets'
 import { fetchProxies } from '@/store/proxies'
