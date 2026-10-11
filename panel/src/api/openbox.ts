@@ -132,13 +132,16 @@ export interface DnsFilterStatus {
   applied: { enabled: boolean; key: string } | null
   busy: boolean
   connected: boolean
+  queryLog?: DnsFilterQueryLog
 }
+// dnsmasq 查询日志的接入情况:reason 为 user 表示日志去向被用户另行设置,failed 表示加日志后 dnsmasq 起不来
+export interface DnsFilterQueryLog { reason?: 'user' | 'failed' | string; syslog?: boolean }
 export interface DnsFilterSummary {
   enabled: boolean; connected: boolean; queries: number; blocked: number; averageMs: number | null
   hourly: { hour: number; queries: number; blocked: number; elapsed: number; timed: number }[]
   topDomains: { domain: string; count: number }[]
 }
-export interface DnsFilterRecord { id: number; at: number; domain: string; qtype: string; source: string; result: string; list: string; elapsed: number | null }
+export interface DnsFilterRecord { id: number; at: number; domain: string; qtype: string; source: string; result: string; list: string; elapsed: number | null; via?: string }
 export interface DnsFilterPreviewEntry {
   type: string; value: string; rule: string; action: 'allow' | 'block'; important: boolean; conditional: boolean
 }

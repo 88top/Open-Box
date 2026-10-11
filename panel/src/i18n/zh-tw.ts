@@ -1,11 +1,10 @@
 import type { LANG_MESSAGE } from './en'
 import { dnsFilterTw } from './dns-filter'
-import { dnsUpstreamZhTw } from './dns-upstream'
+import { dnsPageZhTw } from './dns-page'
 import { kernelSettingsZhTw } from './kernel-settings'
 
 const zhTW: LANG_MESSAGE = {
   ...dnsFilterTw,
-  ...dnsUpstreamZhTw,
   ...kernelSettingsZhTw,
   overview: '概覽',
   proxies: '代理',
@@ -80,14 +79,10 @@ const zhTW: LANG_MESSAGE = {
   directBypassTitle: '直連不進內核',
   directBypassDescription: '直連流量在入口就放走、不經過內核轉發,吞吐可能翻倍;代價是這部分流量內核看不到——連線頁、流量洞察、各項統計都不會有它們。關掉後所有流量進內核,統計完整,但速度受內核轉發能力限制。',
   directBypassNeedsFakeIp: '提示:FakeIP 沒開(或 DNS 接管關閉)時,入口只放行此刻走直連的站點集裡的 IP 集合,放行範圍比預設小。',
-  bypassPortsTitle: '進內核前放行的連接埠',
-  bypassPortsDescription: '自建服務(RustDesk、連接埠映射出去的 NAS 服務等)用到的連接埠:目標連接埠或來源連接埠是這些的 TCP / UDP 流量在進內核之前就放行,和沒裝 Open-Box 一樣,連接埠映射和打洞不受影響。和「前置自訂分流」裡的「連接埠 → 直連」不同:那種已經進了內核,由內核替它重新連線,NAT 會被打亂。黑名單、白名單各存一份,只有選中的那份生效。',
   bypassPortsModeBlacklist: '黑名單',
   bypassPortsModeWhitelist: '白名單',
   bypassPortsPlaceholder: '例如 21114-21119, 2233',
   bypassPortsBlacklistHint: '黑名單:列出的連接埠不進內核,在進內核前就放行(和沒裝 Open-Box 一樣);其餘所有流量照常進內核。單個連接埠、範圍(用 -)都行,多個用逗號隔開;留空就是全部進內核。多 WAN(mwan3)時,這些連接埠的連線一律走主路由表。',
-  bypassPortsWhitelistHint: '白名單:只有列出的連接埠進內核,其餘流量在進內核前就放行。單個連接埠、範圍(用 -)都行,多個用逗號隔開。',
-  bypassPortsInvalid: '連接埠寫法不對:單個連接埠或範圍(用 -),多個用逗號隔開,如 21114-21119, 2233',
   testExpectedStatusLabel: '可接受狀態碼',
   testExpectedStatusHint: '測速回的狀態碼在這裡面才算通,如 200-299;留空 = 不限。要識別站點攔截(回 403 / 404)的節點,測速網址也換成那個站點。',
   expectedStatusInvalid: '可接受狀態碼寫法不對:狀態碼或範圍,用 / 隔開,如 200-399 或 204',
@@ -806,7 +801,6 @@ const zhTW: LANG_MESSAGE = {
   ipv6Title: 'IPv6',
   dnsModeTitle: 'DNS 劫持',
   dnsModePort: 'DNS 埠:{port}',
-  dnsModeDescription: '區域網路 DNS 怎麼交給核心分流解析;切換後重啟核心生效。',
   dnsModeDnsmasq: 'DNSmasq 轉發',
   dnsModeHijack: '防火牆劫持',
   dnsModeOff: '停用',
@@ -814,10 +808,8 @@ const zhTW: LANG_MESSAGE = {
   dnsModeHijackNote: '防火牆把區域網路發往 53 埠的查詢直接改寫給核心,不經過 dnsmasq。',
   dnsModeOffNote: '核心不改寫任何 DNS。終端要指向 AdGuard Home / Pi-hole,再把它們的上游指向核心 DNS 位址。',
   dnsModeUpstreamHint: '核心 DNS 位址 {addr},三種模式都可用;AdGuard Home / Pi-hole 把上游指向它即可。切換模式後清一次 DNS 快取。',
-  dnsModeSaved: 'DNS 劫持方式已儲存,重啟核心後生效。',
   dnsRewriteTitle: 'DNS 重寫',
   dnsRewriteDescription: '把某個網域的解析結果改成另一個網域或固定 IP;預設帶兩條 Google 的重寫（解決 Google Play 無法下載 App 問題）。',
-  dnsRewriteNote: '目標或位址儲存後伺服端立即更新,已有的解析結果要等 DNS 快取過期;新增、修改來源網域、啟用或停用規則後請重啟核心,入口規則和轉發名單才會同步。泛網域 *.example.com 只匹配子網域,不含 example.com 本身。',
   dnsRewriteEmpty: '沒有重寫規則。',
   dnsRewriteAdd: '新增',
   dnsRewriteRestore: '恢復預設',
@@ -829,8 +821,6 @@ const zhTW: LANG_MESSAGE = {
   dnsRewriteKindDomain: '另一個網域',
   dnsRewriteKindIp: '固定 IP',
   dnsRewriteDomainHint: '目標網域按現有分流策略動態解析,應答裡帶 CNAME 和目標的位址。',
-  dnsRewriteIpHint: '一行一個,IPv4 / IPv6 可以混填;A 查詢只回 IPv4,AAAA 只回 IPv6(IPv6 關著時回空)。',
-  dnsRewriteSavedRestart: 'DNS 重寫已儲存,重啟核心後生效(核心的 DNS 規則按來源網域產生)。',
   dnsRewriteSavedLive: 'DNS 重寫已儲存並生效;已快取的解析結果等過期後更新。',
   dnsRewriteBadSource: '查詢網域不合法:寫精確網域或 *.example.com。',
   dnsRewriteBadDomain: '目標網域不合法,且不能和查詢網域相同。',
@@ -842,7 +832,6 @@ const zhTW: LANG_MESSAGE = {
   routeDnsRewrite: 'DNS 重寫',
   routeDnsRewriteHit: '重寫:{source} → {target}',
   dnsFakeIpTitle: '啟用 FakeIP（走代理的網域交給節點解析）',
-  dnsFakeIpNote: '對照試驗用。預設關閉。開啟後走代理的網域不在本機解析：核心先回佔位位址(198.15.0.0/15)，連線時把網域交給節點。只對能攜帶網域的出站(SOCKS5 / vless / vmess / trojan / hysteria 等)生效；按目標 IP 判的前置規則對這些連線不會命中。切換後重啟核心生效。',
   nodeDirectTitle: '訂閱和節點站點直連',
   nodeDirectDescription: '訂閱位址和各節點的伺服器位址一律直連,排在所有站點集之前。',
   nodeDirectOnNote: '開啟中:這些位址走直連、用本地解析;重啟核心後生效。',
@@ -1403,6 +1392,7 @@ const zhTW: LANG_MESSAGE = {
   failoverRecheckFailed: '重新檢測沒能開始:{error}',
   probeOverloaded: '測速跟不上:每秒要測約 {demand} 個,核心每秒測完約 {done} 個,檢測會變慢;可減少組裡的節點或加大檢測間隔。',
   listSeparator: '、',
+  ...dnsPageZhTw,
 }
 
 export default zhTW

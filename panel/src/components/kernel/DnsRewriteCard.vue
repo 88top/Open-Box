@@ -15,25 +15,29 @@
           />
           <span
             class="badge badge-sm"
-            :class="pending ? 'badge-warning' : rewriteEnabled ? 'badge-success' : ''"
-          >{{ $t(pending ? 'dfPending' : rewriteEnabled ? 'dfEnabled' : 'dfDisabled') }}</span>
+            :class="rewriteEnabled ? 'badge-success' : ''"
+          >{{ $t(rewriteEnabled ? 'dfEnabled' : 'dfDisabled') }}</span>
         </div>
         <div class="flex shrink-0 items-center gap-1">
           <button
+            v-tip="$t('dnsRewriteRestore')"
             type="button"
-            class="btn btn-ghost btn-sm"
+            class="btn btn-ghost btn-square btn-sm"
             :disabled="saving"
-            @click="restoreDefaults"
+            :aria-label="$t('dnsRewriteRestore')"
+            @click="showRestore = true"
           >
-            {{ $t('dnsRewriteRestore') }}
+            <ArrowUturnLeftIcon class="h-4 w-4" />
           </button>
           <button
+            v-tip="$t('dnsRewriteAdd')"
             type="button"
-            class="btn btn-primary btn-sm"
+            class="btn btn-primary btn-sm btn-square"
             :disabled="saving"
+            :aria-label="$t('dnsRewriteAdd')"
             @click="openEditor(null)"
           >
-            {{ $t('dnsRewriteAdd') }}
+            <PlusIcon class="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -87,6 +91,36 @@
       </div>
       <p class="text-base-content/50 text-xs">{{ $t('dnsRewriteNote') }}</p>
     </div>
+
+    <DialogWrapper
+      v-model="showRestore"
+      :title="$t('dnsRewriteRestore')"
+    >
+      <div class="flex flex-col gap-3">
+        <p class="text-sm">{{ $t('dnsRewriteRestoreConfirm') }}</p>
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-sm"
+            @click="showRestore = false"
+          >
+            {{ $t('cancel') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-error"
+            :disabled="saving"
+            @click="restoreDefaults"
+          >
+            <span
+              v-if="saving"
+              class="loading loading-spinner loading-xs"
+            />
+            {{ $t('confirm') }}
+          </button>
+        </div>
+      </div>
+    </DialogWrapper>
 
     <DialogWrapper
       v-model="showEditor"
@@ -197,33 +231,26 @@ import type { OpenboxDnsRewriteRule, OpenboxProfile } from '@/api/openbox'
 import { fetchDnsRewriteDefaults } from '@/api/openbox'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import { showNotification } from '@/helper/notification'
-import { PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
-import { computed, ref, watch } from 'vue'
-import { useI18n } from 'vue-i18n'
+import { ArrowUturnLeftIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { computed, ref } from 'vue'
 
 const props = defineProps<{
   profile: OpenboxProfile
   patchProfile: (patch: Record<string, unknown>) => Promise<OpenboxProfile>
-  restartPending?: boolean
   busy?: boolean
 }>()
-const { t } = useI18n()
 
 const rules = computed<OpenboxDnsRewriteRule[]>(() => props.profile.dns?.rewrite?.rules ?? [])
 const rewriteEnabled = computed(() => props.profile.dns?.rewrite?.enabled !== false)
 const saving = ref(false)
-const localPending = ref(false)
-const pending = computed(() => Boolean(props.restartPending || localPending.value))
-watch(() => props.restartPending, (value) => { if (!value) localPending.value = false })
 
 const targetText = (rule: OpenboxDnsRewriteRule) => (rule.domain ? rule.domain : (rule.addresses ?? []).join(', '))
 
 const notifyError = (err: unknown) =>
   showNotification({ content: 'routingSaveFailed', params: { message: err instanceof Error ? err.message : String(err) }, type: 'alert-error' })
 
-// 哪些改动要重启内核:内核的 DNS 规则按「启用的源域名」生成,所以增删规则、改源域名、启停都要重启;
-// 只改目标(域名 / IP)是面板侧的重写服务在做,两秒内自己生效
-const emit = defineEmits<{ needsRestart: [] }>()
+// 增删规则、改源域名、启停会改内核的 DNS 规则(按「启用的源域名」生成),后台自动重新生成并生效;
+// 只改目标(域名 / IP)是面板侧的重写服务在做,两秒内自己生效。两种提示文案不同
 const needsRestart = (before: OpenboxDnsRewriteRule[], after: OpenboxDnsRewriteRule[]) => {
   const key = (list: OpenboxDnsRewriteRule[]) => list.map((r) => `${r.id}\u0000${normalizeDomain(r.source)}\u0000${r.enabled !== false}`).sort().join('\n')
   return key(before) !== key(after)
@@ -235,10 +262,6 @@ const persist = async (next: OpenboxDnsRewriteRule[], enabled = rewriteEnabled.v
   try {
     await props.patchProfile({ dns: { rewrite: { enabled, initialized: 1, rules: next } } })
     showNotification({ content: restart ? 'dnsRewriteSavedRestart' : 'dnsRewriteSavedLive', type: 'alert-success' })
-    if (restart) {
-      localPending.value = true
-      emit('needsRestart')
-    }
     return true
   } catch (err) {
     notifyError(err)
@@ -326,6 +349,7 @@ const confirmDelete = async () => {
   }
 }
 
+const showRestore = ref(false)
 // ---- 恢复默认:只动两条默认项(按稳定 id 重置 / 补回),其它规则原样保留;同源的自定义规则让默认项让位 ----
 const restoreDefaults = async () => {
   if (saving.value) return
@@ -347,10 +371,11 @@ const restoreDefaults = async () => {
     out.push({ ...d })
   }
   if (JSON.stringify(out) === JSON.stringify(rules.value)) {
+    showRestore.value = false
     showNotification({ content: 'dnsRewriteAlreadyDefault', type: 'alert-info' })
     return
   }
-  await persist(out)
-  void t
+  const ok = await persist(out)
+  if (ok) showRestore.value = false
 }
 </script>

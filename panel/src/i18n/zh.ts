@@ -1,11 +1,10 @@
 import type { LANG_MESSAGE } from './en'
 import { dnsFilterZh } from './dns-filter'
-import { dnsUpstreamZh } from './dns-upstream'
+import { dnsPageZh } from './dns-page'
 import { kernelSettingsZh } from './kernel-settings'
 
 const zh: LANG_MESSAGE = {
   ...dnsFilterZh,
-  ...dnsUpstreamZh,
   ...kernelSettingsZh,
   overview: '概览',
   proxies: '代理',
@@ -25,8 +24,6 @@ const zh: LANG_MESSAGE = {
   memoryUsage: '内存使用',
   version: '版本',
   noContent: '无内容',
-  flushDNSCache: '清空DNS缓存',
-  flushDNSCacheSuccess: 'DNS缓存清空成功',
   chains: '代理链',
   outbound: '出站节点',
   sortBy: '排序方式',
@@ -121,8 +118,6 @@ const zh: LANG_MESSAGE = {
   bypassPortsModeWhitelist: '白名单',
   bypassPortsPlaceholder: '例如 21114-21119, 2233',
   bypassPortsBlacklistHint: '黑名单:列出的端口不进内核,在进内核前就放行(和没装 Open-Box 一样);其余所有流量照常进内核。单个端口、范围(用 -)都行,多个用逗号隔开;留空就是全部进内核。多 WAN(mwan3)时,这些端口的连接一律走主路由表。',
-  bypassPortsWhitelistHint: '白名单:只有列出的端口进内核,其余流量在进内核前就放行。单个端口、范围(用 -)都行,多个用逗号隔开。',
-  bypassPortsInvalid: '端口写法不对:单个端口或范围(用 -),多个用逗号隔开,如 21114-21119, 2233',
   testExpectedStatusLabel: '可接受状态码',
   testExpectedStatusHint: '测速回的状态码在这里面才算通,如 200-299;留空 = 不限。要识别站点拦截(回 403 / 404)的节点,测速地址也换成那个站点。',
   expectedStatusInvalid: '可接受状态码写法不对:状态码或范围,用 / 隔开,如 200-399 或 204',
@@ -806,7 +801,6 @@ const zh: LANG_MESSAGE = {
   ipv6Title: 'IPv6',
   dnsModeTitle: 'DNS 劫持',
   dnsModePort: 'DNS 端口:{port}',
-  dnsModeDescription: '局域网 DNS 怎么交给内核分流解析;切换后重启内核生效。',
   dnsModeDnsmasq: 'DNSmasq 转发',
   dnsModeHijack: '防火墙劫持',
   dnsModeOff: '禁用',
@@ -814,10 +808,8 @@ const zh: LANG_MESSAGE = {
   dnsModeHijackNote: '防火墙把局域网发往 53 端口的查询直接改写给内核,不经过 dnsmasq。',
   dnsModeOffNote: '内核不改写任何 DNS。终端要指向 AdGuard Home / Pi-hole,再把它们的上游指向内核 DNS 地址。',
   dnsModeUpstreamHint: '内核 DNS 地址 {addr},三种模式都可用;AdGuard Home / Pi-hole 把上游指向它即可。切换模式后清一次 DNS 缓存。',
-  dnsModeSaved: 'DNS 劫持方式已保存,重启内核后生效。',
   dnsRewriteTitle: 'DNS 重写',
   dnsRewriteDescription: '把某个域名的解析结果改成另一个域名或固定 IP;默认带两条 Google 的重写（解决 Google Play 无法下载 App 问题）。',
-  dnsRewriteNote: '目标或地址保存后服务端立即更新,已有的解析结果要等 DNS 缓存过期;新增、修改源域名、启用或停用规则后请重启内核,入口规则和转发名单才会同步。泛域名 *.example.com 只匹配子域,不含 example.com 本身。',
   dnsRewriteEmpty: '没有重写规则。',
   dnsRewriteAdd: '添加',
   dnsRewriteRestore: '恢复默认',
@@ -829,8 +821,6 @@ const zh: LANG_MESSAGE = {
   dnsRewriteKindDomain: '另一个域名',
   dnsRewriteKindIp: '固定 IP',
   dnsRewriteDomainHint: '目标域名按现有分流策略动态解析,应答里带 CNAME 和目标的地址。',
-  dnsRewriteIpHint: '一行一个,IPv4 / IPv6 可以混填;A 查询只回 IPv4,AAAA 只回 IPv6(IPv6 关着时回空)。',
-  dnsRewriteSavedRestart: 'DNS 重写已保存,重启内核生效(内核的 DNS 规则按源域名生成)。',
   dnsRewriteSavedLive: 'DNS 重写已保存并生效;已缓存的解析结果等过期后更新。',
   dnsRewriteBadSource: '查询域名不合法:写精确域名或 *.example.com。',
   dnsRewriteBadDomain: '目标域名不合法,且不能和查询域名相同。',
@@ -842,7 +832,6 @@ const zh: LANG_MESSAGE = {
   routeDnsRewrite: 'DNS 重写',
   routeDnsRewriteHit: '重写:{source} → {target}',
   dnsFakeIpTitle: '启用 FakeIP（走代理的域名交给节点解析）',
-  dnsFakeIpNote: '对照试验用。默认关闭。开启后走代理的域名不在本地解析：内核先回占位地址(198.15.0.0/15)，连接时把域名交给节点。只对能携带域名的出站(SOCKS5 / vless / vmess / trojan / hysteria 等)生效；按目标 IP 判的前置规则对这些连接不会命中。切换后重启内核生效。',
   nodeDirectTitle: '订阅和节点站点直连',
   nodeDirectDescription: '订阅地址和各节点的服务器地址一律直连,排在所有站点集之前。',
   nodeDirectOnNote: '开启中:这些地址走直连、用本地解析;重启内核后生效。',
@@ -1403,6 +1392,7 @@ const zh: LANG_MESSAGE = {
   failoverRecheckFailed: '重新检测没能开始:{error}',
   probeOverloaded: '测速跟不上:每秒要测约 {demand} 个,内核每秒测完约 {done} 个,检测会变慢;可减少组里的节点或加大检测间隔。',
   listSeparator: '、',
+  ...dnsPageZh,
 }
 
 export default zh

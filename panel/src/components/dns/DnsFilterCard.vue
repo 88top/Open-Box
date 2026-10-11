@@ -14,32 +14,30 @@
           />
           <span
             class="badge badge-sm"
-            :class="
-              status.pending ? 'badge-warning' : status.applied?.enabled ? 'badge-success' : ''
-            "
-            >{{
-              $t(
-                status.pending ? 'dfPending' : status.applied?.enabled ? 'dfEnabled' : 'dfDisabled',
-              )
-            }}</span
+            :class="status.settings.enabled ? 'badge-success' : ''"
+            >{{ $t(status.settings.enabled ? 'dfEnabled' : 'dfDisabled') }}</span
           >
         </div>
         <div class="flex shrink-0 items-center gap-1">
           <button
+            v-tip="$t('dfUpdate')"
             type="button"
-            class="btn btn-ghost btn-sm"
+            class="btn btn-ghost btn-square btn-sm"
             :disabled="busy || saving || !status.settings.lists.some((l) => l.enabled)"
+            :aria-label="$t('dfUpdate')"
             @click="$emit('update')"
           >
-            {{ $t('dfUpdate') }}
+            <ArrowPathIcon class="h-4 w-4" />
           </button>
           <button
+            v-tip="$t('dfAdd')"
             type="button"
-            class="btn btn-primary btn-sm"
+            class="btn btn-primary btn-sm btn-square"
             :disabled="busy || saving"
+            :aria-label="$t('dfAdd')"
             @click="edit()"
           >
-            {{ $t('dfAdd') }}
+            <PlusIcon class="h-4 w-4" />
           </button>
         </div>
       </div>
@@ -327,7 +325,7 @@ import {
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import DnsFilterPreviewDialog from '@/components/dns/DnsFilterPreviewDialog.vue'
 import { showNotification } from '@/helper/notification'
-import { ArrowPathIcon, ChevronDownIcon, EyeIcon, PencilSquareIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ArrowPathIcon, ChevronDownIcon, EyeIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { computed, ref, watch } from 'vue'
 const props = defineProps<{ status: DnsFilterStatus; busy: boolean }>()
 const emit = defineEmits<{ saved: []; update: [list?: DnsFilterList] }>()

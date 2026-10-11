@@ -1,257 +1,363 @@
 <template>
-  <!-- DNS 上游:直连侧 / 代理侧各一个主上游加最多 3 个备用上游。只收 IP 或「上游 DNS」记号 wan,协议只有 UDP / TCP。
-       保存前先用内核真的查一次(api/dns-upstream-test.mjs);改动写进档案,重启内核后生效。
-       字段和校验规则对照 server/engine/dns-upstream.mjs、server/api/profile.mjs。 -->
-  <section class="card bg-base-100 border-base-300/60 border">
+  <!-- DNS 上游(对照 v0.1.309):一行一条,哪一侧 / 协议 / 地址 / 端口;每行能测试、修改、删除。
+       改完即保存:先让内核按所选协议真的查一次,查不通不保存。 -->
+  <div class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
       <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="min-w-0">
-          <h2 class="text-base font-semibold">{{ $t('dnsUpTitle') }}</h2>
-          <p class="text-base-content/60 text-xs">{{ $t('dnsUpDescription') }}</p>
+        <h2 class="text-base font-semibold">{{ $t('dnsUpstreamTitle') }}</h2>
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            v-tip="$t('dnsUpstreamRestore')"
+            type="button"
+            class="btn btn-ghost btn-square btn-sm"
+            :disabled="busy"
+            :aria-label="$t('dnsUpstreamRestore')"
+            @click="restoreOpen = true"
+          >
+            <ArrowUturnLeftIcon class="h-4 w-4" />
+          </button>
+          <button
+            v-tip="$t('dnsUpstreamAdd')"
+            type="button"
+            class="btn btn-primary btn-sm btn-square shrink-0"
+            :disabled="busy"
+            :aria-label="$t('dnsUpstreamAdd')"
+            @click="openEditor(null)"
+          >
+            <PlusIcon class="h-4 w-4" />
+          </button>
         </div>
-        <div class="flex shrink-0 flex-wrap items-center gap-2">
-          <span
-            v-if="regionPending"
-            class="text-base-content/60 flex items-center gap-1 text-xs"
-          >
-            <span class="loading loading-spinner loading-xs" />{{ $t('dnsUpRegionPending') }}
-          </span>
+      </div>
+      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dnsUpstreamDescription') }}</p>
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center gap-2">
+          <span class="text-xs font-medium">{{ $t('dnsRegionLabel') }}</span>
           <div
-            class="join"
-            role="group"
-            :aria-label="$t('dnsUpRegion')"
+            role="tablist"
+            class="tabs-box tabs tabs-sm w-fit"
           >
-            <button
+            <a
               v-for="r in REGIONS"
               :key="r"
-              type="button"
-              class="btn btn-sm join-item"
-              :class="draft.region === r ? 'btn-primary' : 'btn-ghost border-base-300'"
-              :aria-pressed="draft.region === r"
-              :disabled="saving"
-              @click="setRegion(r)"
-            >
-              {{ $t(r === 'cn' ? 'dnsUpRegionCn' : 'dnsUpRegionIntl') }}
-            </button>
+              role="tab"
+              class="tab"
+              :class="!detecting && region === r && 'tab-active'"
+              @click="switchRegion(r)"
+            >{{ regionName(r) }}</a>
           </div>
         </div>
+        <p class="text-base-content/50 text-xs">
+          {{ detecting ? $t('dnsRegionDetecting') : $t(region === 'intl' ? 'dnsRegionIntlNote' : 'dnsRegionCnNote') }}
+        </p>
       </div>
-      <p class="text-base-content/50 text-xs">{{ $t('dnsUpRegionHint') }}</p>
-
-      <div
-        v-for="side in SIDES"
-        :key="side"
-        class="border-base-300/50 flex flex-col gap-2 border-t pt-3"
-      >
-        <div>
-          <h3 class="font-medium">{{ $t(side === 'direct' ? 'dnsUpDirect' : 'dnsUpProxy') }}</h3>
-          <p class="text-base-content/50 text-xs">
-            {{ $t(side === 'direct' ? 'dnsUpDirectNote' : 'dnsUpProxyNote') }}
-          </p>
-        </div>
+      <div class="divide-base-content/10 divide-y">
         <div
-          v-for="(row, index) in rows(side)"
-          :key="row.id"
-          class="flex flex-col gap-1"
+          v-for="row in rows"
+          :key="row.key"
+          class="flex items-center gap-2 py-2"
         >
-          <div class="flex flex-wrap items-center gap-2">
-            <span class="text-base-content/60 w-16 shrink-0 text-xs">
-              {{ $t(index === 0 ? 'dnsUpPrimary' : 'dnsUpExtra') }}
-            </span>
-            <label
-              class="flex items-center gap-1.5 text-xs"
-              :class="wanDisabled(side) && !isWan(row.u) && 'opacity-50'"
-              :title="wanDisabled(side) ? $t('dnsUpErrWanCn') : ''"
-            >
-              <input
-                type="checkbox"
-                class="toggle toggle-xs"
-                :checked="isWan(row.u)"
-                :disabled="saving || (wanDisabled(side) && !isWan(row.u))"
-                @change="toggleWan(row.u, ($event.target as HTMLInputElement).checked)"
-              />
-              {{ $t('dnsUpWan') }}
-            </label>
-            <input
-              v-if="!isWan(row.u)"
-              v-model="row.u.server"
-              class="input input-sm w-48 font-mono"
-              :class="row.u.server.trim() && !isIp(row.u.server) && 'input-error'"
-              :placeholder="$t('dnsUpServerPlaceholder')"
-              :aria-label="$t('dnsUpServer')"
-              :disabled="saving"
-              maxlength="64"
-              spellcheck="false"
-              @input="clearTest(row.id)"
-            />
+          <span class="badge badge-sm shrink-0">{{ sideName(row.side) }}</span>
+          <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-1.5 font-mono text-xs">
+            <span
+              v-if="!row.wan"
+              class="text-base-content/60"
+            >{{ row.protocol.toUpperCase() }}</span>
+            <template v-if="row.wan">
+              <span class="font-sans">{{ $t('dnsUpstreamWan') }}</span>
+              <span class="text-base-content/50 truncate font-sans">{{ wanLabel }}</span>
+              <span
+                v-if="row.side === 'proxy'"
+                class="text-base-content/50 font-sans"
+              >{{ $t('dnsUpstreamWanDirectTag') }}</span>
+            </template>
             <span
               v-else
-              class="text-base-content/60 text-xs"
-              >{{ wanText }}</span
-            >
-            <select
-              v-model="row.u.protocol"
-              class="select select-sm w-24"
-              :aria-label="$t('dnsUpProtocol')"
-              :disabled="saving || isWan(row.u)"
-              @change="clearTest(row.id)"
-            >
-              <option value="udp">UDP</option>
-              <option value="tcp">TCP</option>
-            </select>
-            <input
-              v-model.number="row.u.port"
-              type="number"
-              min="1"
-              max="65535"
-              class="input input-sm w-24 tabular-nums"
-              :class="!isWan(row.u) && !isPort(row.u.port) && 'input-error'"
-              :aria-label="$t('dnsUpPort')"
-              :disabled="saving || isWan(row.u)"
-              @input="clearTest(row.id)"
-            />
-            <button
-              type="button"
-              class="btn btn-sm"
-              :disabled="saving || testing(row.id)"
-              @click="runTest(side, row.id, row.u)"
-            >
-              <span
-                v-if="testing(row.id)"
-                class="loading loading-spinner loading-xs"
-              />
-              {{ $t(testing(row.id) ? 'dnsUpTesting' : 'dnsUpTest') }}
-            </button>
-            <button
-              v-if="index > 0"
-              type="button"
-              class="btn btn-ghost btn-sm hover:text-error"
-              :disabled="saving"
-              @click="removeExtra(side, index - 1)"
-            >
-              {{ $t('dnsUpRemove') }}
-            </button>
+              class="truncate"
+            >{{ row.server }}<span class="text-base-content/50">:{{ row.port }}</span></span>
+            <span
+              v-if="row.index > 0"
+              class="text-base-content/50 font-sans"
+            >{{ $t('dnsUpstreamBackupTag') }}</span>
           </div>
-          <p
-            v-if="testLine(row.id)"
-            class="pl-16 text-xs break-words"
-            :class="testLine(row.id)?.cls"
-            role="status"
-          >
-            {{ testLine(row.id)?.text }}
-          </p>
-        </div>
-        <div class="flex flex-wrap items-center gap-2">
           <button
+            v-tip="$t('dnsUpstreamTest')"
             type="button"
-            class="btn btn-ghost btn-sm"
-            :disabled="saving || draft[side].extras.length >= MAX_EXTRAS"
-            @click="addExtra(side)"
+            class="btn btn-ghost btn-square btn-xs"
+            :disabled="busy"
+            :aria-label="$t('dnsUpstreamTest')"
+            @click="runTest(row, row.key)"
           >
-            {{ $t('dnsUpAddExtra') }}
+            <span
+              v-if="testingKey === row.key"
+              class="loading loading-spinner loading-xs"
+            />
+            <BoltIcon
+              v-else
+              class="h-4 w-4"
+            />
           </button>
-          <span class="text-base-content/50 text-xs">{{ $t('dnsUpExtraHint', { max: MAX_EXTRAS }) }}</span>
-        </div>
-      </div>
-
-      <p
-        v-if="formError"
-        class="text-error text-xs"
-        role="alert"
-      >
-        {{ formError }}
-      </p>
-      <div
-        v-if="failed.length"
-        role="alert"
-        class="alert alert-warning alert-soft flex flex-wrap items-center justify-between gap-2 py-2 text-xs"
-      >
-        <span>{{ $t('dnsUpTestFailedBeforeSave', { list: failed.join('、') }) }}</span>
-        <button
-          type="button"
-          class="btn btn-warning btn-xs"
-          :disabled="saving"
-          @click="save(true)"
-        >
-          {{ $t('dnsUpSaveAnyway') }}
-        </button>
-      </div>
-      <div class="border-base-300/50 flex flex-wrap items-center justify-between gap-2 border-t pt-3">
-        <span class="text-base-content/50 text-xs">{{ dirty ? $t('dnsUpDirty') : '' }}</span>
-        <div class="flex items-center gap-2">
           <button
             type="button"
-            class="btn btn-ghost btn-sm"
-            :disabled="saving || restoring"
+            class="btn btn-ghost btn-square btn-xs"
+            :disabled="busy"
+            :aria-label="$t('groupEdit')"
+            @click="openEditor(row)"
+          >
+            <PencilSquareIcon class="h-4 w-4" />
+          </button>
+          <button
+            v-tip="deleteBlocked(row) || $t('delete')"
+            type="button"
+            class="btn btn-ghost btn-square btn-xs hover:text-error"
+            :disabled="busy || !!deleteBlocked(row)"
+            :aria-label="$t('delete')"
+            @click="removeRow(row)"
+          >
+            <TrashIcon class="h-4 w-4" />
+          </button>
+        </div>
+      </div>
+      <p class="text-base-content/50 text-xs">{{ $t('dnsUpstreamExtrasNote') }}</p>
+    </div>
+
+    <!-- 确认框:恢复默认 / 切换地区 / 删除 共用 -->
+    <DialogWrapper
+      v-model="confirmOpen"
+      :title="confirmTitle"
+    >
+      <div class="flex flex-col gap-3">
+        <p class="text-sm">{{ confirmMessage }}</p>
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-sm"
+            @click="answerConfirm(false)"
+          >
+            {{ $t('cancel') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-error"
+            @click="answerConfirm(true)"
+          >
+            {{ $t('confirm') }}
+          </button>
+        </div>
+      </div>
+    </DialogWrapper>
+
+    <DialogWrapper
+      v-model="restoreOpen"
+      :title="$t('dnsUpstreamRestore')"
+    >
+      <div class="flex flex-col gap-3">
+        <p class="text-sm">{{ $t('dnsUpstreamRestoreConfirm') }}</p>
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-sm"
+            @click="restoreOpen = false"
+          >
+            {{ $t('cancel') }}
+          </button>
+          <button
+            type="button"
+            class="btn btn-sm btn-error"
+            :disabled="busy"
             @click="restoreDefaults"
           >
             <span
-              v-if="restoring"
+              v-if="busy"
               class="loading loading-spinner loading-xs"
             />
-            {{ $t('dnsUpRestore') }}
+            {{ $t('confirm') }}
+          </button>
+        </div>
+      </div>
+    </DialogWrapper>
+
+    <DialogWrapper
+      v-model="editorOpen"
+      :title="$t(editing ? 'dnsUpstreamEditTitle' : 'dnsUpstreamAddTitle')"
+      box-class="w-full max-w-lg"
+    >
+      <div
+        v-if="draft"
+        class="flex flex-col gap-3 text-sm"
+      >
+        <div class="flex flex-col gap-1">
+          <label class="text-xs font-medium">{{ $t('dnsUpstreamSide') }}</label>
+          <div
+            role="tablist"
+            class="tabs-box tabs tabs-sm w-fit"
+          >
+            <a
+              v-for="s in SIDES"
+              :key="s"
+              role="tab"
+              class="tab"
+              :class="draft.side === s && 'tab-active'"
+              @click="draft.side = s"
+            >{{ sideName(s) }}</a>
+          </div>
+          <p class="text-base-content/50 text-xs">
+            {{ $t(draft.side === 'direct' ? 'dnsUpstreamDirectNote' : 'dnsUpstreamProxyNote') }}
+          </p>
+        </div>
+        <div class="flex flex-col gap-1">
+          <div
+            role="tablist"
+            class="tabs-box tabs tabs-sm w-fit"
+          >
+            <a
+              role="tab"
+              class="tab"
+              :class="!draft.wan && 'tab-active'"
+              @click="draft.wan = false"
+            >{{ $t('dnsUpstreamSourceIp') }}</a>
+            <a
+              role="tab"
+              class="tab"
+              :class="[draft.wan && 'tab-active', !wanAllowed(draft.side) && 'tab-disabled']"
+              @click="wanAllowed(draft.side) && (draft.wan = true)"
+            >{{ $t('dnsUpstreamSourceWan') }}</a>
+          </div>
+          <template v-if="wanAllowed(draft.side)">
+            <p
+              v-if="draft.side === 'proxy' && draft.wan"
+              class="text-base-content/50 text-xs"
+            >
+              {{ $t('dnsUpstreamWanProxyNote') }}
+            </p>
+          </template>
+          <p
+            v-else
+            class="text-base-content/50 text-xs"
+          >
+            {{ $t('dnsUpstreamWanNotInCn') }}
+          </p>
+        </div>
+        <div class="flex items-center gap-2">
+          <select
+            v-if="!draft.wan"
+            v-model="draft.protocol"
+            class="select select-sm w-20 shrink-0"
+            :title="$t('dnsUpstreamProtocol')"
+          >
+            <option value="udp">UDP</option>
+            <option value="tcp">TCP</option>
+          </select>
+          <span
+            v-if="draft.wan"
+            class="text-base-content/60 min-w-0 flex-1 truncate text-xs"
+          >{{ wanLabel }}</span>
+          <template v-else>
+            <input
+              v-model.trim="draft.server"
+              type="text"
+              class="input input-sm min-w-0 flex-1 font-mono"
+              :class="{ 'input-error': draft.server && !isIp(draft.server) }"
+              :placeholder="draft.side === 'direct' ? '223.5.5.5' : '1.1.1.1'"
+              spellcheck="false"
+            >
+            <input
+              v-model.number="draft.port"
+              type="number"
+              min="1"
+              max="65535"
+              class="input input-sm w-20 shrink-0"
+              :class="{ 'input-error': !isPort(draft.port) }"
+              :title="$t('dnsUpstreamPort')"
+            >
+          </template>
+          <button
+            v-tip="$t('dnsUpstreamTest')"
+            type="button"
+            class="btn btn-ghost btn-square btn-sm shrink-0"
+            :disabled="busy || !draftValid"
+            :aria-label="$t('dnsUpstreamTest')"
+            @click="draft && runTest(draft, 'draft')"
+          >
+            <span
+              v-if="testingKey === 'draft'"
+              class="loading loading-spinner loading-xs"
+            />
+            <BoltIcon
+              v-else
+              class="h-4 w-4"
+            />
+          </button>
+        </div>
+        <p
+          v-if="editorError"
+          class="text-error text-xs"
+        >
+          {{ editorError }}
+        </p>
+        <div class="flex justify-end gap-2">
+          <button
+            type="button"
+            class="btn btn-sm"
+            :disabled="busy"
+            @click="editorOpen = false"
+          >
+            {{ $t('cancel') }}
           </button>
           <button
             type="button"
             class="btn btn-primary btn-sm"
-            :disabled="saving || !dirty"
-            @click="save(false)"
+            :disabled="busy || !draftValid"
+            @click="saveEditor"
           >
             <span
-              v-if="saving"
+              v-if="busy"
               class="loading loading-spinner loading-xs"
             />
-            {{ $t('save') }}
+            {{ $t('subscriptionSave') }}
           </button>
         </div>
       </div>
-    </div>
-  </section>
+    </DialogWrapper>
+  </div>
 </template>
 
 <script setup lang="ts">
 import {
   detectDnsRegion,
   fetchDnsRegionState,
-  fetchProfile,
   fetchWanDns,
   testDnsUpstream,
   type OpenboxDnsUpstreamTestResult,
   type OpenboxProfile,
 } from '@/api/openbox'
+import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import { showNotification } from '@/helper/notification'
-import { computed, onBeforeUnmount, onMounted, reactive, ref, watch } from 'vue'
+import { ArrowUturnLeftIcon, BoltIcon, PencilSquareIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { computed, onBeforeUnmount, onMounted, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 
 type Region = 'cn' | 'intl'
 type Side = 'direct' | 'proxy'
 type Protocol = 'udp' | 'tcp'
+// 一条上游:wan 为真表示「上游 DNS」(路由器接口上的,固定直连、UDP 53)
 interface Upstream {
+  side: Side
+  wan: boolean
   server: string
   protocol: Protocol
   port: number
 }
-interface SideDraft {
-  main: Upstream
-  extras: Upstream[]
-}
-interface Draft {
-  region: Region
-  direct: SideDraft
-  proxy: SideDraft
-}
-interface TestState {
-  status: 'running' | 'ok' | 'fail'
-  result?: OpenboxDnsUpstreamTestResult
-  error?: string
+interface Row extends Upstream {
+  index: number
+  key: string
 }
 
 const props = defineProps<{
   profile: OpenboxProfile
   patchProfile: (patch: Record<string, unknown>) => Promise<OpenboxProfile>
 }>()
-// DNS 上游改了要重启内核才生效:保存后告诉页面挂出「立即重启内核」
-const emit = defineEmits<{ needsRestart: [] }>()
+// 地区在后台判出来以后,让页面重新拉一遍档案
+const emit = defineEmits<{ refresh: [] }>()
 const { t } = useI18n()
 
 // 下面这些常量和校验照抄 server/engine/dns-upstream.mjs;服务端那份才是准绳,这里只为在请求发出去之前挡掉明显的错
@@ -260,7 +366,6 @@ const DEFAULT_PORT = 53
 const MAX_EXTRAS = 3
 const REGIONS: Region[] = ['cn', 'intl']
 const SIDES: Side[] = ['direct', 'proxy']
-// 备用上游档案里没写协议时,服务端按这一侧的默认协议补(直连 udp / 代理 tcp)
 const FALLBACK_PROTOCOL: Record<Side, Protocol> = { direct: 'udp', proxy: 'tcp' }
 const IPV4_RE = /^(?:(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)\.){3}(?:25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)$/
 const IPV6_RE = /^[0-9a-f:]+$/i
@@ -272,301 +377,369 @@ const isIp = (value: string) => {
   if (!host.includes(':')) return false
   return IPV6_RE.test(host) && host !== '::' && host.split('::').length <= 2 && host.split(':').length <= 8
 }
-const isPort = (value: unknown) =>
-  typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65535
-const isWan = (u: Upstream) => u.server === WAN
-const wanUpstream = (): Upstream => ({ server: WAN, protocol: 'udp', port: DEFAULT_PORT })
+const isPort = (value: unknown) => typeof value === 'number' && Number.isInteger(value) && value >= 1 && value <= 65535
+
+const sideName = (side: Side) => t(side === 'direct' ? 'dnsUpstreamDirect' : 'dnsUpstreamProxy')
+const regionName = (r: Region) => t(r === 'intl' ? 'dnsRegionIntl' : 'dnsRegionCn')
+const regionDefaultsText = (r: Region) => t(r === 'intl' ? 'dnsRegionDefaultsIntl' : 'dnsRegionDefaultsCn')
+const regionScopeText = (r: Region) => t(r === 'intl' ? 'dnsRegionScopeIntl' : 'dnsRegionScopeCn')
+// 「上游 DNS」只有直连能用;路由器在中国大陆之外时代理 DNS 也能用(那边的上游 DNS 没有污染)
+const region = computed<Region>(() => (props.profile.dns?.region === 'intl' ? 'intl' : 'cn'))
+const wanAllowed = (side: Side) => side === 'direct' || region.value === 'intl'
 
 // 两个地区的默认(regionDnsDefaults):中国大陆——直连用上游 DNS,代理走 TCP 1.1.1.1;中国大陆之外——两侧都用上游 DNS
-const regionDefaults = (region: Region): Draft => ({
-  region,
-  direct: { main: wanUpstream(), extras: [] },
-  proxy: {
-    main: region === 'intl' ? wanUpstream() : { server: '1.1.1.1', protocol: 'tcp', port: DEFAULT_PORT },
-    extras: [],
-  },
+const regionDefaultsPatch = (r: Region) => ({
+  direct: WAN,
+  directProtocol: 'udp',
+  directPort: DEFAULT_PORT,
+  directExtras: [] as unknown[],
+  proxy: r === 'intl' ? WAN : '1.1.1.1',
+  proxyProtocol: r === 'intl' ? 'udp' : 'tcp',
+  proxyPort: DEFAULT_PORT,
+  proxyExtras: [] as unknown[],
+})
+const regionFallbackServer = (r: Region) => (r === 'intl' ? '8.8.8.8' : '223.5.5.5')
+
+// 路由器此刻的上游 DNS(显示在「上游 DNS」那一行)
+const wanServers = ref<string[]>([])
+const wanLabel = computed(() =>
+  wanServers.value.length ? wanServers.value[0] : t('dnsUpstreamWanUnknown', { server: regionFallbackServer(region.value) }),
+)
+onMounted(async () => {
+  try {
+    wanServers.value = await fetchWanDns()
+  } catch {
+    wanServers.value = []
+  }
 })
 
-const readUpstream = (server: unknown, protocol: unknown, port: unknown, fallback: Protocol): Upstream => {
-  const wan = server === WAN
-  return {
-    server: typeof server === 'string' ? server : '',
-    protocol: wan ? 'udp' : protocol === 'udp' || protocol === 'tcp' ? protocol : fallback,
-    port: wan ? DEFAULT_PORT : typeof port === 'number' && Number.isInteger(port) ? port : DEFAULT_PORT,
-  }
+// ---- 启动时后台按出口公网 IP 判地区:没判完时轮询,判完刷新页面
+const detecting = ref(false)
+const lastRegion = ref<Region | null>(null)
+let pollTimer: ReturnType<typeof setTimeout> | null = null
+let pollCount = 0
+const stopPoll = () => {
+  if (pollTimer) clearTimeout(pollTimer)
+  pollTimer = null
+  detecting.value = false
 }
-const readExtras = (list: unknown, fallback: Protocol): Upstream[] =>
-  Array.isArray(list)
-    ? list.slice(0, MAX_EXTRAS).map((item) => {
-        const o = (item && typeof item === 'object' ? item : {}) as Record<string, unknown>
-        return readUpstream(o.server, o.protocol, o.port, fallback)
-      })
-    : []
-
-const fromProfile = (profile: OpenboxProfile): Draft => {
-  const dns = profile.dns ?? {}
-  return {
-    region: dns.region === 'intl' ? 'intl' : 'cn',
-    direct: {
-      main: readUpstream(dns.direct, dns.directProtocol, dns.directPort, 'udp'),
-      extras: readExtras(dns.directExtras, 'udp'),
-    },
-    proxy: {
-      main: readUpstream(dns.proxy, dns.proxyProtocol, dns.proxyPort, 'tcp'),
-      extras: readExtras(dns.proxyExtras, 'tcp'),
-    },
-  }
-}
-
-const outUpstream = (u: Upstream): Upstream =>
-  isWan(u) ? wanUpstream() : { server: u.server.trim(), protocol: u.protocol, port: u.port }
-const toPatch = (d: Draft) => {
-  const direct = outUpstream(d.direct.main)
-  const proxy = outUpstream(d.proxy.main)
-  return {
-    region: d.region,
-    direct: direct.server,
-    directProtocol: direct.protocol,
-    directPort: direct.port,
-    directExtras: d.direct.extras.map(outUpstream),
-    proxy: proxy.server,
-    proxyProtocol: proxy.protocol,
-    proxyPort: proxy.port,
-    proxyExtras: d.proxy.extras.map(outUpstream),
-  }
-}
-function clone<T>(value: T): T {
-  return JSON.parse(JSON.stringify(value)) as T
-}
-
-const draft = ref<Draft>(fromProfile(props.profile))
-// 上一次从档案读到(或保存成功)的样子:是否有未保存的修改、哪些上游是新改的,都拿它比
-const baseline = ref<Draft>(clone(draft.value))
-const dirty = computed(() => JSON.stringify(toPatch(draft.value)) !== JSON.stringify(toPatch(baseline.value)))
-const adopt = (profile: OpenboxProfile) => {
-  draft.value = fromProfile(profile)
-  baseline.value = clone(draft.value)
-}
-// 档案被别处改了(比如页面重新加载)且这里没有未保存的修改时,跟着换
-watch(
-  () => props.profile,
-  (profile) => {
-    if (!dirty.value) adopt(profile)
-  },
-)
-
-const saving = ref(false)
-const restoring = ref(false)
-const formError = ref('')
-const failed = ref<string[]>([])
-const tests = reactive<Record<string, TestState>>({})
-const wanServers = ref<string[]>([])
-const wanText = computed(() =>
-  wanServers.value.length
-    ? t('dnsUpWanNow', { servers: wanServers.value.join('、') })
-    : t('dnsUpWanNone'),
-)
-
-const rows = (side: Side) => [
-  { id: `${side}-main`, u: draft.value[side].main },
-  ...draft.value[side].extras.map((u, i) => ({ id: `${side}-${i}`, u })),
-]
-// 路由器在中国大陆时代理侧不能用上游 DNS:中国大陆的 DNS 对境外域名有污染(服务端 regionDnsError 也会拒)
-const wanDisabled = (side: Side) => side === 'proxy' && draft.value.region === 'cn'
-
-const clearTest = (id: string) => {
-  delete tests[id]
-  failed.value = []
-}
-const clearSideTests = (side: Side) => {
-  for (const key of Object.keys(tests)) if (key.startsWith(`${side}-`)) delete tests[key]
-  failed.value = []
-}
-const testing = (id: string) => tests[id]?.status === 'running'
-
-const setRegion = (region: Region) => {
-  if (region === draft.value.region) return
-  draft.value = regionDefaults(region)
-  formError.value = ''
-  failed.value = []
-  for (const key of Object.keys(tests)) delete tests[key]
-}
-const toggleWan = (u: Upstream, on: boolean) => {
-  if (on) Object.assign(u, wanUpstream())
-  else Object.assign(u, { server: wanServers.value[0] ?? '', protocol: u.protocol, port: DEFAULT_PORT })
-  failed.value = []
-}
-const addExtra = (side: Side) => {
-  if (draft.value[side].extras.length >= MAX_EXTRAS) return
-  draft.value[side].extras.push({ server: '', protocol: FALLBACK_PROTOCOL[side], port: DEFAULT_PORT })
-  clearSideTests(side)
-}
-const removeExtra = (side: Side, index: number) => {
-  draft.value[side].extras.splice(index, 1)
-  clearSideTests(side)
-}
-
-const runTest = async (side: Side, id: string, u: Upstream): Promise<TestState> => {
-  formError.value = ''
-  if (!isWan(u)) {
-    if (!isIp(u.server)) {
-      tests[id] = { status: 'fail', error: t('dnsUpErrIp') }
-      return tests[id]
-    }
-    if (!isPort(u.port)) {
-      tests[id] = { status: 'fail', error: t('dnsUpErrPort') }
-      return tests[id]
-    }
-  }
-  tests[id] = { status: 'running' }
+const poll = async () => {
+  pollTimer = null
+  let state = null as Awaited<ReturnType<typeof fetchDnsRegionState>> | null
   try {
-    const result = await testDnsUpstream(
-      isWan(u)
-        ? { side, server: WAN, protocol: 'udp' }
-        : { side, server: u.server.trim(), protocol: u.protocol, port: u.port },
-    )
-    tests[id] = { status: result.ok ? 'ok' : 'fail', result }
-  } catch (error) {
-    tests[id] = { status: 'fail', error: error instanceof Error ? error.message : String(error) }
-  }
-  return tests[id]
-}
-const testLine = (id: string): { cls: string; text: string } | null => {
-  const state = tests[id]
-  if (!state || state.status === 'running') return null
-  if (state.status === 'fail') {
-    return { cls: 'text-error', text: t('dnsUpTestFail', { error: state.result?.error || state.error || '' }) }
-  }
-  const r = state.result as OpenboxDnsUpstreamTestResult
-  const parts = [t('dnsUpTestOk', { ms: r.ms, server: r.server })]
-  const route = r.chain?.length ? r.chain.join(' → ') : r.via
-  if (route) parts.push(t('dnsUpTestVia', { via: route }))
-  if (r.warning) parts.push(r.warning)
-  return { cls: r.warning ? 'text-warning' : 'text-success', text: parts.join(' · ') }
-}
-
-// 返回第一条不合规的说明,没问题返回空串
-const validate = (): string => {
-  for (const side of SIDES) {
-    const list = [draft.value[side].main, ...draft.value[side].extras]
-    const keys: string[] = []
-    for (const u of list) {
-      if (!isWan(u)) {
-        if (!isIp(u.server)) return t('dnsUpErrIp')
-        if (!isPort(u.port)) return t('dnsUpErrPort')
-      }
-      keys.push(isWan(u) ? WAN : u.server.trim().toLowerCase())
-    }
-    if (new Set(keys).size !== keys.length) return t('dnsUpErrDup')
-    if (wanDisabled(side) && keys.includes(WAN)) return t('dnsUpErrWanCn')
-  }
-  return ''
-}
-
-const entryKey = (side: Side, u: Upstream) => `${side}|${isWan(u) ? WAN : u.server.trim()}|${u.protocol}|${u.port}`
-// 保存前只测新改的上游:和上次保存的一模一样的不重复测
-const testChanged = async (): Promise<string[]> => {
-  const known = new Set(
-    SIDES.flatMap((side) => [baseline.value[side].main, ...baseline.value[side].extras].map((u) => entryKey(side, u))),
-  )
-  const bad: string[] = []
-  for (const side of SIDES) {
-    for (const row of rows(side)) {
-      if (known.has(entryKey(side, row.u))) continue
-      const state = await runTest(side, row.id, row.u)
-      if (state.status === 'fail') bad.push(isWan(row.u) ? t('dnsUpWan') : row.u.server.trim())
-    }
-  }
-  return bad
-}
-
-const save = async (force: boolean) => {
-  const error = validate()
-  formError.value = error
-  if (error) return
-  saving.value = true
-  try {
-    if (!force) {
-      failed.value = await testChanged()
-      if (failed.value.length) return
-    }
-    await props.patchProfile({ dns: toPatch(draft.value) })
-    baseline.value = clone(draft.value)
-    failed.value = []
-    showNotification({ content: 'dnsUpSaved', type: 'alert-success' })
-    emit('needsRestart')
-  } catch (err) {
-    showNotification({
-      content: 'routingSaveFailed',
-      params: { message: err instanceof Error ? err.message : String(err) },
-      type: 'alert-error',
-    })
-  } finally {
-    saving.value = false
-  }
-}
-
-// 恢复默认:先按出口公网 IP 判一次路由器在哪,再把两侧换成那个地区的默认;判不出来就按页面上现在选的地区
-const restoreDefaults = async () => {
-  restoring.value = true
-  try {
-    let region = draft.value.region
-    let detected = false
-    try {
-      const result = await detectDnsRegion()
-      if (result.region) {
-        region = result.region
-        detected = true
-      }
-    } catch {
-      /* 判不出来按当前地区 */
-    }
-    draft.value = regionDefaults(region)
-    formError.value = ''
-    failed.value = []
-    for (const key of Object.keys(tests)) delete tests[key]
-    const name = t(region === 'cn' ? 'dnsUpRegionCn' : 'dnsUpRegionIntl')
-    showNotification({
-      content: detected ? 'dnsUpRestored' : 'dnsUpDetectFailed',
-      params: { region: name },
-      type: detected ? 'alert-success' : 'alert-warning',
-    })
-  } finally {
-    restoring.value = false
-  }
-}
-
-// 启动时那次后台判地区还没做完就显示「正在判断」,隔几秒问一次;做完了且这里没有未保存的修改,重新读档案
-const regionPending = ref(false)
-let pollTimer: ReturnType<typeof setTimeout> | undefined
-let wasPending = false
-let disposed = false
-const pollRegion = async () => {
-  try {
-    const state = await fetchDnsRegionState()
-    if (disposed) return
-    regionPending.value = state.pending
-    if (state.pending) {
-      wasPending = true
-      pollTimer = setTimeout(pollRegion, 3000)
-      return
-    }
-    if (wasPending && !dirty.value) adopt(await fetchProfile())
+    state = await fetchDnsRegionState()
   } catch {
-    regionPending.value = false
+    state = null
+  }
+  if (!state) {
+    detecting.value = false
+    return
+  }
+  if (state.pending) {
+    detecting.value = true
+    if (++pollCount < 60) pollTimer = setTimeout(poll, 3000)
+    return
+  }
+  if (detecting.value || state.region !== region.value) {
+    detecting.value = false
+    lastRegion.value = region.value
+    emit('refresh')
   }
 }
-
+watch(region, (next) => {
+  if (lastRegion.value && next !== lastRegion.value) {
+    showNotification({ content: 'dnsRegionDetected', params: { region: regionName(next) }, type: 'alert-info' })
+  }
+  lastRegion.value = null
+})
 onMounted(() => {
-  fetchWanDns()
-    .then((servers) => {
-      wanServers.value = servers
-    })
-    .catch(() => {})
-  void pollRegion()
+  poll()
 })
 onBeforeUnmount(() => {
-  disposed = true
-  clearTimeout(pollTimer)
+  if (pollTimer) clearTimeout(pollTimer)
 })
+
+// ---- 档案 ⇄ 行
+const busy = ref(false)
+const readOne = (side: Side, server: unknown, protocol: unknown, port: unknown): Upstream | null => {
+  const wan = server === WAN
+  const host = typeof server === 'string' && !wan ? server : ''
+  if (!wan && !host) return null
+  return {
+    side,
+    wan,
+    server: wan ? '' : host,
+    protocol: wan ? 'udp' : protocol === 'udp' || protocol === 'tcp' ? protocol : FALLBACK_PROTOCOL[side],
+    port: wan || !isPort(port) ? DEFAULT_PORT : (port as number),
+  }
+}
+const sideRows = (side: Side): Row[] => {
+  const dns = (props.profile.dns ?? {}) as Record<string, unknown>
+  const main = side === 'direct' ? readOne(side, dns.direct, dns.directProtocol, dns.directPort) : readOne(side, dns.proxy, dns.proxyProtocol, dns.proxyPort)
+  const extrasRaw = (side === 'direct' ? dns.directExtras : dns.proxyExtras) as Array<Record<string, unknown>> | undefined
+  const extras = (Array.isArray(extrasRaw) ? extrasRaw : [])
+    .slice(0, MAX_EXTRAS)
+    .map((x) => readOne(side, x?.server, x?.protocol, x?.port))
+  return [main, ...extras]
+    .filter((x): x is Upstream => !!x)
+    .map((x, index) => ({ ...x, index, key: `${side}-${index}` }))
+}
+const rows = computed<Row[]>(() => [...sideRows('direct'), ...sideRows('proxy')])
+const countOf = (side: Side) => rows.value.filter((r) => r.side === side).length
+const rowLabel = (r: Upstream) => (r.wan ? t('dnsUpstreamWan') : r.server)
+
+const toUpstreamOut = (u: Upstream) =>
+  u.wan ? { server: WAN, protocol: 'udp', port: DEFAULT_PORT } : { server: u.server, protocol: u.protocol, port: u.port }
+// 把一整张列表写回档案:每侧第一条是主上游,后面是备用;一侧删光了就退回「上游 DNS」
+const toPatch = (list: Upstream[]) => {
+  const out: Record<string, unknown> = {}
+  for (const side of SIDES) {
+    const own = list.filter((r) => r.side === side)
+    const [main, ...extras] = own.length ? own : [{ side, wan: true, server: '', protocol: 'udp' as Protocol, port: DEFAULT_PORT }]
+    const m = toUpstreamOut(main)
+    const ex = extras.slice(0, MAX_EXTRAS).map(toUpstreamOut)
+    if (side === 'direct') Object.assign(out, { direct: m.server, directProtocol: m.protocol, directPort: m.port, directExtras: ex })
+    else Object.assign(out, { proxy: m.server, proxyProtocol: m.protocol, proxyPort: m.port, proxyExtras: ex })
+  }
+  return out
+}
+const persist = async (list: Upstream[]) => {
+  await props.patchProfile({ dns: toPatch(list) })
+}
+const notifyFail = (error: unknown) =>
+  showNotification({
+    content: 'routingSaveFailed',
+    params: { message: error instanceof Error ? error.message : String(error) },
+    type: 'alert-error',
+  })
+
+// ---- 确认框(恢复默认 / 切换地区 / 删除共用)
+const confirmOpen = ref(false)
+const confirmTitle = ref('')
+const confirmMessage = ref('')
+let confirmResolve: ((ok: boolean) => void) | null = null
+const askConfirm = (message: string, title = '') =>
+  new Promise<boolean>((resolve) => {
+    confirmTitle.value = title
+    confirmMessage.value = message
+    confirmResolve = resolve
+    confirmOpen.value = true
+  })
+const answerConfirm = (ok: boolean) => {
+  const resolve = confirmResolve
+  confirmResolve = null
+  confirmOpen.value = false
+  resolve?.(ok)
+}
+watch(confirmOpen, (open) => {
+  if (!open && confirmResolve) {
+    confirmResolve(false)
+    confirmResolve = null
+  }
+})
+
+// ---- 切换地区:两侧换成该地区的默认值,备用清空
+const switchRegion = async (next: Region) => {
+  if (busy.value || next === region.value) return
+  const ok = await askConfirm(
+    t('dnsRegionSwitchConfirm', { region: regionName(next), scope: regionScopeText(next), defaults: regionDefaultsText(next) }),
+  )
+  if (!ok) return
+  stopPoll()
+  busy.value = true
+  try {
+    await props.patchProfile({ dns: { region: next, ...regionDefaultsPatch(next) } })
+    showNotification({ content: 'dnsRegionSwitched', params: { region: regionName(next) }, type: 'alert-success' })
+  } catch (error) {
+    notifyFail(error)
+  } finally {
+    busy.value = false
+  }
+}
+
+// ---- 恢复默认:先按出口公网 IP 判一次地区,再换回那个地区的默认值
+const restoreOpen = ref(false)
+const restoreDefaults = async () => {
+  if (busy.value) return
+  stopPoll()
+  busy.value = true
+  try {
+    let detected: { region: Region | null; ip: string } = { region: null, ip: '' }
+    try {
+      detected = await detectDnsRegion()
+    } catch {
+      // 判不出来就按当前地区恢复
+    }
+    const target = detected.region ?? region.value
+    const defaults = regionDefaultsPatch(target)
+    const dns = (props.profile.dns ?? {}) as Record<string, unknown>
+    const same =
+      target === region.value &&
+      dns.direct === defaults.direct &&
+      !((dns.directExtras as unknown[] | undefined) ?? []).length &&
+      dns.proxy === defaults.proxy &&
+      dns.proxyProtocol === defaults.proxyProtocol &&
+      !((dns.proxyExtras as unknown[] | undefined) ?? []).length &&
+      (defaults.proxy === WAN || ((dns.proxyPort as number | undefined) ?? DEFAULT_PORT) === defaults.proxyPort)
+    if (!same) await props.patchProfile({ dns: { region: target, ...defaults } })
+    restoreOpen.value = false
+    const params = { region: regionName(target), ip: detected.ip }
+    if (detected.region) {
+      showNotification({
+        content: same ? 'dnsUpstreamAlreadyDefault' : 'dnsUpstreamRestored',
+        params,
+        type: same ? 'alert-info' : 'alert-success',
+      })
+    } else {
+      showNotification({
+        content: same ? 'dnsUpstreamAlreadyDefaultNoRegion' : 'dnsUpstreamRestoredNoRegion',
+        params,
+        type: 'alert-warning',
+      })
+    }
+  } catch (error) {
+    notifyFail(error)
+  } finally {
+    busy.value = false
+  }
+}
+
+// ---- 测试:让内核按所选协议真的查一次;经代理的那一侧会带上走的线路
+const testingKey = ref('')
+const testPayload = (u: Upstream) => ({
+  side: u.side,
+  server: u.wan ? WAN : u.server,
+  protocol: u.wan ? 'udp' : u.protocol,
+  port: u.port,
+})
+const viaText = (r: OpenboxDnsUpstreamTestResult) => (r.chain?.length ? r.chain.join(' → ') : r.via)
+const detailOf = (r: OpenboxDnsUpstreamTestResult, withNote: boolean) =>
+  [
+    ...(r.wan ? [r.server] : []),
+    `${r.ms} ms`,
+    ...(r.via ? [t('dnsUpstreamTestVia', { policy: r.policy ?? '', node: viaText(r) })] : []),
+    ...(r.warning ? [r.warning] : []),
+    ...(withNote && r.note ? [r.note] : []),
+  ].join(' · ')
+const failText = (r: OpenboxDnsUpstreamTestResult) =>
+  [t('dnsUpstreamTestFail', { message: r.error ?? '' }), ...(r.note ? [r.note] : [])].join(' · ')
+const runTest = async (u: Upstream, key: string) => {
+  if (!u.wan && (!isIp(u.server) || !isPort(u.port))) return
+  testingKey.value = key
+  editorError.value = ''
+  try {
+    const r = await testDnsUpstream(testPayload(u))
+    if (!r.ok) {
+      if (key === 'draft') editorError.value = failText(r)
+      showNotification({
+        content: 'dnsUpstreamTestFailed',
+        params: { side: sideName(u.side), message: r.error ?? '' },
+        type: 'alert-error',
+        timeout: 8000,
+      })
+      return
+    }
+    showNotification({
+      content: 'dnsUpstreamTestOk',
+      params: { side: sideName(u.side), detail: detailOf(r, true) },
+      type: 'alert-success',
+      timeout: 6000,
+    })
+  } catch (error) {
+    if (key === 'draft') editorError.value = error instanceof Error ? error.message : String(error)
+    notifyFail(error)
+  } finally {
+    testingKey.value = ''
+  }
+}
+
+// ---- 删除:不能删光;路由器在中国大陆时代理 DNS 至少留一个,别的一侧删光了改用「上游 DNS」
+const deleteBlocked = (r: Row) => {
+  if (countOf(r.side) > 1) return ''
+  if (wanAllowed(r.side)) return r.wan ? t('dnsUpstreamWanLast') : ''
+  return t('dnsUpstreamLastOne')
+}
+const removeRow = async (r: Row) => {
+  if (deleteBlocked(r)) return
+  const params = { side: sideName(r.side), server: rowLabel(r) }
+  const ok = await askConfirm(t(countOf(r.side) <= 1 ? 'dnsUpstreamDeleteToWanConfirm' : 'dnsUpstreamDeleteConfirm', params))
+  if (!ok) return
+  busy.value = true
+  try {
+    await persist(rows.value.filter((x) => x.key !== r.key))
+    showNotification({ content: 'dnsUpstreamRemoved', params, type: 'alert-success' })
+  } catch (error) {
+    notifyFail(error)
+  } finally {
+    busy.value = false
+  }
+}
+
+// ---- 添加 / 修改
+const editorOpen = ref(false)
+const editing = ref<Row | null>(null)
+const draft = ref<Upstream | null>(null)
+const editorError = ref('')
+const draftValid = computed(() => {
+  const d = draft.value
+  return !!d && (d.wan || (isIp(d.server) && isPort(d.port)))
+})
+const openEditor = (row: Row | null) => {
+  editing.value = row
+  editorError.value = ''
+  draft.value = row
+    ? { side: row.side, wan: row.wan, server: row.server, protocol: row.protocol, port: row.port }
+    : { side: 'proxy', wan: false, server: '', protocol: 'tcp', port: DEFAULT_PORT }
+  editorOpen.value = true
+}
+const saveEditor = async () => {
+  const d = draft.value
+  if (!d || !draftValid.value) return
+  if (d.wan && !wanAllowed(d.side)) {
+    editorError.value = t('dnsUpstreamWanNotInCn')
+    return
+  }
+  const current = editing.value
+  // 把这一条从原来那一侧挪走以后,原来那一侧不能空(路由器在中国大陆时代理 DNS)
+  if (current && current.side !== d.side && !wanAllowed(current.side) && countOf(current.side) <= 1) {
+    editorError.value = t('dnsUpstreamLastOne')
+    return
+  }
+  const duplicate = rows.value
+    .filter((r) => r.key !== current?.key)
+    .some((r) => r.side === d.side && (d.wan ? r.wan : !r.wan && r.server === d.server))
+  if (duplicate) {
+    editorError.value = t('dnsUpstreamExtraDuplicate')
+    return
+  }
+  if (!current && countOf(d.side) > MAX_EXTRAS) {
+    editorError.value = t('dnsUpstreamTooMany', { max: MAX_EXTRAS + 1 })
+    return
+  }
+  busy.value = true
+  editorError.value = ''
+  try {
+    // 改完即保存:先让内核真的查一次,查不通不保存
+    const r = await testDnsUpstream(testPayload(d))
+    if (!r.ok) {
+      editorError.value = failText(r)
+      return
+    }
+    const next: Upstream[] = current
+      ? rows.value.map((x) => (x.key === current.key ? { ...d } : x))
+      : [...rows.value, { ...d }]
+    await persist([...next.filter((x) => x.side === 'direct'), ...next.filter((x) => x.side === 'proxy')])
+    showNotification({
+      content: 'dnsUpstreamSaved',
+      params: { side: sideName(d.side), detail: detailOf(r, false) },
+      type: 'alert-success',
+      timeout: 6000,
+    })
+    editorOpen.value = false
+  } catch (error) {
+    editorError.value = error instanceof Error ? error.message : String(error)
+  } finally {
+    busy.value = false
+  }
+}
 </script>

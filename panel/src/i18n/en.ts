@@ -1,8 +1,7 @@
 import { dnsFilterEn } from './dns-filter'
-import { dnsUpstreamEn } from './dns-upstream'
+import { dnsPageEn } from './dns-page'
 const en = {
   ...dnsFilterEn,
-  ...dnsUpstreamEn,
   overview: 'Overview',
   proxies: 'Proxies',
   rules: 'Rules',
@@ -76,14 +75,10 @@ const en = {
   directBypassTitle: 'Direct traffic bypasses the kernel',
   directBypassDescription: 'Direct traffic is let through at the entry point without going through the kernel, which can roughly double throughput. The trade-off is that the kernel cannot see this traffic: it will not appear on the Connections page, in traffic insights or in any statistics. Turn it off to send all traffic through the kernel for complete statistics, at the cost of speed limited by kernel forwarding.',
   directBypassNeedsFakeIp: 'Note: when FakeIP is off (or DNS takeover is disabled), the entry point only lets through the IP sets of site sets currently routed direct, which is a narrower range than the default.',
-  bypassPortsTitle: 'Ports let through before the kernel',
-  bypassPortsDescription: 'Ports used by self-hosted services (RustDesk, port-forwarded NAS services, etc.): TCP / UDP traffic whose destination or source port matches is let through before it reaches the kernel, just as if Open-Box were not installed, so port forwarding and hole punching keep working. This differs from “port → direct” in the pre-routing custom rules: that traffic has already entered the kernel, which reconnects on its behalf and breaks NAT. The blacklist and whitelist are stored separately; only the selected one takes effect.',
   bypassPortsModeBlacklist: 'Blacklist',
   bypassPortsModeWhitelist: 'Whitelist',
   bypassPortsPlaceholder: 'e.g. 21114-21119, 2233',
   bypassPortsBlacklistHint: 'Blacklist: listed ports skip the kernel and are let through before it (as if Open-Box were not installed); all other traffic enters the kernel as usual. Single ports and ranges (with -) both work, separate several with commas; leave empty to send everything into the kernel. With multiple WANs (mwan3), connections on these ports always use the main routing table.',
-  bypassPortsWhitelistHint: 'Whitelist: only the listed ports enter the kernel; all other traffic is let through before it. Single ports and ranges (with -) both work, separate several with commas.',
-  bypassPortsInvalid: 'Invalid port format: use single ports or ranges (with -), separated by commas, e.g. 21114-21119, 2233',
   testExpectedStatusLabel: 'Acceptable status codes',
   testExpectedStatusHint: 'A speed test counts as successful only if the returned status code is in this list, e.g. 200-299; empty = no limit. To detect nodes blocked by a site (returning 403 / 404), point the test URL at that site too.',
   expectedStatusInvalid: 'Invalid acceptable status codes: use codes or ranges separated by /, e.g. 200-399 or 204',
@@ -808,7 +803,6 @@ const en = {
   ipv6Title: 'IPv6',
   dnsModeTitle: 'DNS hijack',
   dnsModePort: 'DNS port {port}',
-  dnsModeDescription: 'How LAN DNS queries reach the kernel for split resolution; restart the kernel after switching.',
   dnsModeDnsmasq: 'dnsmasq forwarding',
   dnsModeHijack: 'Firewall hijack',
   dnsModeOff: 'Off',
@@ -816,10 +810,8 @@ const en = {
   dnsModeHijackNote: 'The firewall rewrites every LAN query to port 53 straight to the kernel, bypassing dnsmasq.',
   dnsModeOffNote: 'The kernel rewrites no DNS. Point clients at AdGuard Home / Pi-hole and point their upstream at the kernel DNS address.',
   dnsModeUpstreamHint: 'Kernel DNS address {addr}, available in every mode; point AdGuard Home / Pi-hole upstream at it. Flush DNS caches after switching modes.',
-  dnsModeSaved: 'DNS hijack mode saved; restart the kernel to apply.',
   dnsRewriteTitle: 'DNS rewrites',
   dnsRewriteDescription: 'Answer a domain with another domain or fixed IPs; two Google rewrites are included by default to fix Google Play app download problems.',
-  dnsRewriteNote: 'Target / address changes reach the panel service at once, but existing answers stay until DNS caches expire; after adding, editing a source domain, enabling or disabling a rule, restart the kernel so its rules and the forwarding list follow. *.example.com matches subdomains only, not example.com itself.',
   dnsRewriteEmpty: 'No rewrite rules.',
   dnsRewriteAdd: 'Add',
   dnsRewriteRestore: 'Restore defaults',
@@ -832,7 +824,6 @@ const en = {
   dnsRewriteKindIp: 'Fixed IPs',
   dnsRewriteDomainHint: 'The target is resolved live through the current DNS policy; the answer carries the CNAME and the target addresses.',
   dnsRewriteIpHint: 'One per line, IPv4 and IPv6 may be mixed; A returns IPv4 only, AAAA returns IPv6 only (empty while IPv6 is off).',
-  dnsRewriteSavedRestart: 'DNS rewrites saved; restart the kernel to apply (kernel DNS rules are generated from source domains).',
   dnsRewriteSavedLive: 'DNS rewrites saved and active; cached answers update once they expire.',
   dnsRewriteBadSource: 'Invalid queried domain: use an exact domain or *.example.com.',
   dnsRewriteBadDomain: 'Invalid target domain, and it must differ from the queried domain.',
@@ -844,7 +835,6 @@ const en = {
   routeDnsRewrite: 'DNS rewrite',
   routeDnsRewriteHit: 'Rewrite: {source} → {target}',
   dnsFakeIpTitle: 'Enable FakeIP (let the node resolve proxied domains)',
-  dnsFakeIpNote: 'For comparison only. Off by default. Proxied domains are not resolved locally: the kernel answers with a placeholder (198.15.0.0/15) and hands the domain to the node on connect. Only outbounds that carry domains (SOCKS5 / vless / vmess / trojan / hysteria…) benefit; IP-based rules ahead of the proxied sets will not match these connections. Restart the kernel after switching.',
   nodeDirectTitle: 'Direct for subscription & node hosts',
   nodeDirectDescription: 'Subscription URLs and every node server address go direct, ahead of all site sets.',
   nodeDirectOnNote: 'On: these hosts go direct with local DNS. Takes effect after a kernel restart.',
@@ -1405,6 +1395,7 @@ const en = {
   failoverRecheckFailed: 'Could not start the re-check: {error}',
   probeOverloaded: 'Tests cannot keep up: about {demand} needed per second, the core finishes about {done}. Checks will lag; use fewer nodes or longer intervals.',
   listSeparator: ', ',
+  ...dnsPageEn,
 }
 
 export type LANG_MESSAGE = typeof en
