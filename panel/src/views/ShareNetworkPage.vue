@@ -33,13 +33,13 @@
 
         <div
           v-else-if="!servers.length"
-          class="flex flex-col items-center gap-3 py-16"
+          class="flex flex-col items-center gap-3 py-14 text-center"
         >
           <ShareIcon class="text-base-content/30 h-10 w-10" />
           <p class="text-base-content/60 text-sm">{{ $t('serverEmpty') }}</p>
           <button
             type="button"
-            class="btn btn-primary btn-sm rounded-full"
+            class="btn btn-primary btn-sm"
             @click="openCreate"
           >
             <PlusIcon class="h-4 w-4" />
