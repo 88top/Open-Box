@@ -15,6 +15,7 @@ import { registerDnsFilterRoutes } from './api/dns-filter.mjs'
 import { registerDeployRoutes } from './api/deploy.mjs'
 import { registerGroupRoutes } from './api/groups.mjs'
 import { registerNodeLatencyRoutes } from './api/node-latency.mjs'
+import { registerNodeInfoRoutes } from './api/node-info.mjs'
 import { registerSiteLatencyRoutes } from './api/site-latency.mjs'
 import { registerDnsUpstreamTestRoutes } from './api/dns-upstream-test.mjs'
 import { registerPenetrationRoutes } from './api/penetration.mjs'
@@ -1330,6 +1331,8 @@ registerPenetrationRoutes(app, { store, ctx: obCtx, paths: obPaths, fetchImpl: g
 // 和内核自己的名额一样多;排队在面板这边,不算请求自己的超时
 const probeLimiter = createProbeLimiter({ limit: 4 })
 registerNodeLatencyRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch, prober: nodeProber, history: latencyHistory, kernelStale, limiter: probeLimiter })
+// 代理页节点悬停浮层的「节点信息」:节点本身的地址 / 协议,出口 IP 的属地、ASN、IP 类型、风控值、原生 / 广播(api/node-info.mjs)
+registerNodeInfoRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch })
 // 概览里的站点延时小卡片:面板经内核的回环入站(panel-in)真去访问一次,量连接建好之后的一次往返
 registerSiteLatencyRoutes(app, { store, fetchImpl: globalThis.fetch })
 registerDnsUpstreamTestRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch })
