@@ -2,7 +2,7 @@
   <!-- 本地分流(客户端):一行 = 设备图标 + 名称 + 最后同步 + 开关 / 二维码 / 复制链接 / 导出文件 -->
   <div class="card">
     <div class="app-card-inset flex flex-col gap-3">
-      <span class="text-base font-medium">{{ $t('clientAppLocalTitle') }}</span>
+      <span class="text-base font-semibold">{{ $t('clientAppLocalTitle') }}</span>
       <p class="text-base-content/60 text-xs">{{ $t('clientAppLocalHint') }}</p>
 
       <div
@@ -167,7 +167,7 @@ const showQr = ref(false)
 const qrDataUrl = ref('')
 
 const name = computed(
-  () => issue.value?.routerName || props.info.serverInfo.name || props.info.routerName,
+  () => props.info.serverInfo.name || props.info.serverInfoDefaults.name || issue.value?.routerName || props.info.routerName,
 )
 
 const code = computed(() => {

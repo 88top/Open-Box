@@ -2,7 +2,7 @@
   <!-- 地区分流:紧凑列表(拖动排序 / 编辑 / 删除),细节在编辑弹窗里。每次操作整份保存,不用重启内核 -->
   <div class="app-card-inset flex flex-col gap-3">
     <div class="flex items-center gap-2">
-      <span class="text-base font-medium">{{ $t('clientAppRegionsTitle') }}</span>
+      <span class="text-base font-semibold">{{ $t('clientAppRegionsTitle') }}</span>
       <div class="ml-auto flex items-center gap-1">
         <button
           type="button"

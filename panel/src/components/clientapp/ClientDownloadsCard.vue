@@ -2,7 +2,7 @@
   <!-- 客户端下载:版本号从 GitHub Releases 读(缓存 10 分钟),点一下直接下载 -->
   <div class="card">
     <div class="app-card-inset flex flex-col gap-3">
-      <span class="text-base font-medium">{{ $t('clientDownloadTitle') }}</span>
+      <span class="text-base font-semibold">{{ $t('clientDownloadTitle') }}</span>
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">
         <component
           :is="tile.available ? 'a' : 'div'"
