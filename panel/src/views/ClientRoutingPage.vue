@@ -38,6 +38,14 @@
           {{ $t('clientRouteEmptyTitle') }}
         </EmptyAction>
 
+        <div
+          v-if="!loading && admitCount"
+          role="alert"
+          class="alert alert-info alert-soft py-2 text-sm"
+        >
+          {{ $t('clientRouteAdmitActive', { count: admitCount }) }}
+        </div>
+
         <!-- 拖拽排序:规则按这个顺序写进内核,先命中的先生效 -->
         <Draggable
           v-model="rows"
@@ -59,7 +67,7 @@
           <div class="min-w-0 flex-1">
             <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
               <span class="max-w-full truncate text-base font-medium">{{ r.name }}</span>
-              <span class="badge badge-outline badge-sm shrink-0 whitespace-nowrap">{{ r.bypass ? $t('clientRouteBypassBadge') : r.outbound }}</span>
+              <span class="badge badge-outline badge-sm shrink-0 whitespace-nowrap">{{ r.admit ? $t('clientRouteAdmitBadge') : r.bypass ? $t('clientRouteBypassBadge') : r.outbound }}</span>
               <StatusBadge
                 v-if="r.enabled === false"
                 :on="false"
@@ -67,12 +75,13 @@
                 :off-text="$t('groupDisabledBadge')"
               />
               <span
-                v-if="!r.bypass && !outboundExists(r.outbound)"
+                v-if="!r.bypass && !r.admit && !outboundExists(r.outbound)"
                 class="text-warning text-xs"
               >{{ $t('clientRouteOutboundMissing', { name: r.outbound }) }}</span>
             </div>
             <div class="text-base-content/60 mt-0.5 text-xs break-all">
-              {{ r.sources.map(labelOf).join(' · ') }}<template v-if="r.bypass && r.macs?.length"> · {{ r.macs.join(' · ') }}</template>
+              <template v-if="matchOf(r) === 'mac'">{{ (r.macs || []).map(labelOfMac).join(' · ') }}</template>
+              <template v-else>{{ r.sources.map(labelOf).join(' · ') }}</template>
             </div>
           </div>
           <button
@@ -165,6 +174,23 @@ const labelOf = (src: string) => {
   const known = knownClients.value.find((c) => c.ip === ip)
   return known?.name ? `${ip} (${known.name})` : src
 }
+
+// 按什么认终端:ip 或 mac(老档案没有 match 字段,「不进内核」「白名单」带 MAC 的算 mac)
+const matchOf = (r: OpenboxClientRoute) =>
+  r.match === 'ip' || r.match === 'mac' ? r.match : (r.bypass || r.admit) && r.macs?.length ? 'mac' : 'ip'
+const labelOfMac = (mac: string) => {
+  const known = knownClients.value.find((c) => (c.mac || '').toLowerCase() === mac.toLowerCase())
+  return known?.name ? `${mac} (${known.name})` : mac
+}
+// 白名单生效时,局域网里进内核的终端 / 网段个数
+const admitCount = computed(
+  () =>
+    new Set(
+      rows.value
+        .filter((r) => r.enabled !== false && r.admit)
+        .flatMap((r) => (matchOf(r) === 'mac' ? (r.macs || []).map((m) => m.toLowerCase().replace(/-/g, ':')) : r.sources)),
+    ).size,
+)
 
 const load = async () => {
   loading.value = true

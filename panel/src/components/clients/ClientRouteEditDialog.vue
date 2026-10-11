@@ -17,13 +17,40 @@
       </div>
 
       <div class="flex flex-col gap-1">
-        <label class="text-xs font-medium">{{ $t('clientRouteSourcesLabel') }}</label>
+        <div class="flex items-center justify-between gap-2">
+          <label class="text-xs font-medium">{{ $t('clientRouteSourcesLabel') }}</label>
+          <div
+            role="tablist"
+            class="tabs-box tabs tabs-xs"
+          >
+            <a
+              v-for="tab in MATCH_TABS"
+              :key="tab.value"
+              role="tab"
+              :class="['tab', form.match === tab.value && 'tab-active']"
+              @click="form.match = tab.value"
+            >
+              {{ $t(tab.label) }}
+            </a>
+          </div>
+        </div>
         <textarea
+          v-if="form.match === 'ip'"
           v-model="form.sourcesText"
           rows="4"
           class="textarea textarea-sm w-full font-mono"
           :placeholder="$t('clientRouteSourcesPlaceholder')"
         />
+        <textarea
+          v-else
+          v-model="form.macsText"
+          rows="4"
+          class="textarea textarea-sm w-full font-mono"
+          :placeholder="$t('clientRouteMacsPlaceholder')"
+        />
+        <p class="text-base-content/50 text-xs">
+          {{ $t(form.match === 'ip' ? 'clientRouteMatchIpHint' : 'clientRouteMatchMacHint') }}
+        </p>
         <!-- 从已知终端添加:带搜索的浮层(DHCP 租约 + 近期流量里的来源 IP),点一项加进上面的
              终端框,已加的打勾,可以连续加多项;点外面关闭。 -->
         <div class="flex items-center gap-2">
@@ -63,7 +90,7 @@
                   >
                     <CheckIcon
                       class="h-4 w-4 shrink-0"
-                      :class="hasSource(c.ip) ? 'text-success' : 'invisible'"
+                      :class="hasPicked(c) ? 'text-success' : 'invisible'"
                     />
                     <span class="shrink-0 font-mono text-xs">{{ c.ip }}</span>
                     <span class="text-base-content/60 min-w-0 flex-1 truncate text-xs">{{ c.name }}</span>
@@ -85,34 +112,28 @@
         </div>
       </div>
 
-      <!-- 不进内核(GitHub #39):像 OpenClash 的黑名单,按 MAC 在入口就放行;开着时不用选出站 -->
-      <label class="flex cursor-pointer items-start gap-2">
-        <input
-          v-model="form.bypass"
-          type="checkbox"
-          class="checkbox checkbox-sm mt-0.5"
-        />
-        <span class="flex flex-col gap-0.5">
-          <span class="text-sm">{{ $t('clientRouteBypassLabel') }}</span>
-          <span class="text-base-content/50 text-xs">{{ $t('clientRouteBypassHint') }}</span>
-        </span>
-      </label>
-
-      <div
-        v-if="form.bypass"
-        class="flex flex-col gap-1"
-      >
-        <label class="text-xs font-medium">{{ $t('clientRouteMacsLabel') }}</label>
-        <textarea
-          v-model="form.macsText"
-          rows="3"
-          class="textarea textarea-sm w-full font-mono"
-          :placeholder="$t('clientRouteMacsPlaceholder')"
-        />
+      <div class="flex flex-col gap-2">
+        <span class="text-xs font-medium">{{ $t('clientRouteModeLabel') }}</span>
+        <label
+          v-for="m in MODES"
+          :key="m.value"
+          class="flex cursor-pointer items-start gap-2 text-sm"
+        >
+          <input
+            v-model="form.mode"
+            type="radio"
+            :value="m.value"
+            class="radio radio-sm mt-0.5"
+          />
+          <span>
+            {{ $t(m.label) }}
+            <span class="text-base-content/50 block text-xs">{{ $t(m.hint) }}</span>
+          </span>
+        </label>
       </div>
 
       <div
-        v-else
+        v-if="form.mode === 'route'"
         class="flex flex-col gap-1"
       >
         <label class="text-xs font-medium">{{ $t('clientRouteOutboundLabel') }}</label>
@@ -123,24 +144,24 @@
         />
         <p class="text-base-content/50 text-xs">{{ $t('clientRouteHint') }}</p>
       </div>
-
-      <div class="flex justify-end gap-2">
-        <button
-          type="button"
-          class="btn btn-sm"
-          @click="isOpen = false"
-        >
-          {{ $t('cancel') }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary btn-sm"
-          @click="submit"
-        >
-          {{ $t('save') }}
-        </button>
-      </div>
     </div>
+
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-sm"
+        @click="isOpen = false"
+      >
+        {{ $t('cancel') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        @click="submit"
+      >
+        {{ $t('save') }}
+      </button>
+    </template>
   </DialogWrapper>
 </template>
 
@@ -172,7 +193,30 @@ const isOpen = computed({
 })
 
 const newId = () => `c${Date.now().toString(36)}${Math.floor(Math.random() * 1e6).toString(36)}`
-const form = reactive({ id: newId(), enabled: true, name: '', sourcesText: '', outbound: '', bypass: false, macsText: '' })
+type ClientMatch = 'ip' | 'mac'
+type ClientMode = 'route' | 'bypass' | 'admit'
+const form = reactive({
+  id: newId(),
+  enabled: true,
+  name: '',
+  match: 'ip' as ClientMatch,
+  mode: 'route' as ClientMode,
+  sourcesText: '',
+  outbound: '',
+  macsText: '',
+})
+
+// 终端按 IP / 网段认,还是按 MAC 认(编辑框里二选一)
+const MATCH_TABS: { value: ClientMatch; label: string }[] = [
+  { value: 'ip', label: 'clientRouteMatchIp' },
+  { value: 'mac', label: 'clientRouteMatchMac' },
+]
+// 这些终端怎么处理:进内核走指定出站 / 不进内核(黑名单)/ 只让这些进内核(白名单)
+const MODES: { value: ClientMode; label: string; hint: string }[] = [
+  { value: 'route', label: 'clientRouteModeRoute', hint: 'clientRouteModeRouteHint' },
+  { value: 'bypass', label: 'clientRouteBypassLabel', hint: 'clientRouteBypassHint' },
+  { value: 'admit', label: 'clientRouteAdmitLabel', hint: 'clientRouteAdmitHint' },
+]
 
 watch(
   () => props.modelValue,
@@ -184,7 +228,8 @@ watch(
     form.name = r?.name || ''
     form.sourcesText = (r?.sources || []).join('\n')
     form.outbound = r?.outbound || ''
-    form.bypass = r?.bypass === true
+    form.mode = r?.admit ? 'admit' : r?.bypass ? 'bypass' : 'route'
+    form.match = r?.match === 'ip' || r?.match === 'mac' ? r.match : (r?.bypass || r?.admit) && r?.macs?.length ? 'mac' : 'ip'
     form.macsText = (r?.macs || []).join('\n')
   },
 )
@@ -192,12 +237,17 @@ watch(
 const sourceLines = () => form.sourcesText.split('\n').map((x) => x.trim()).filter(Boolean)
 const hasSource = (ip: string) => sourceLines().includes(ip) || sourceLines().includes(`${ip}/32`)
 const macLines = () => form.macsText.split(/[\n,;\s]+/).map((x) => x.trim().toLowerCase()).filter(Boolean)
-// 从已知终端加:IP 进终端框;不进内核模式下租约里有 MAC 的顺手填进 MAC 框
+const hasPicked = (c: { ip: string; mac?: string }) =>
+  form.match === 'mac' ? Boolean(c.mac) && macLines().includes((c.mac || '').toLowerCase()) : hasSource(c.ip)
+// 从已知终端加:按 IP 认的加 IP,按 MAC 认的加租约里的 MAC
 const addKnown = (c: { ip: string; mac?: string }) => {
+  if (form.match === 'mac') {
+    const mac = (c.mac || '').toLowerCase()
+    if (mac && !macLines().includes(mac)) form.macsText = [...macLines(), mac].join('\n')
+    return
+  }
   if (!c.ip || hasSource(c.ip)) return
   form.sourcesText = [...sourceLines(), c.ip].join('\n')
-  const mac = (c.mac || '').toLowerCase()
-  if (mac && !macLines().includes(mac)) form.macsText = [...macLines(), mac].join('\n')
 }
 
 // 已知终端的浮层
@@ -244,21 +294,26 @@ const MAC = /^([0-9a-f]{2}[:-]){5}[0-9a-f]{2}$/i
 const submit = () => {
   const name = form.name.trim()
   if (!name) return fail('clientRouteErrName')
-  const sources = form.sourcesText.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean)
-  if (!sources.length) return fail('clientRouteErrNoSources')
-  const bad = sources.find((x) => !isIpOrCidr(x))
-  if (bad) return fail('clientRouteErrSources', { value: bad })
-  if (form.bypass) {
-    const macs = [...new Set(macLines().map((m) => m.replace(/-/g, ':')))]
+  let sources: string[] = []
+  let macs: string[] = []
+  if (form.match === 'ip') {
+    sources = [...new Set(form.sourcesText.split(/[\n,;]+/).map((x) => x.trim()).filter(Boolean))]
+    if (!sources.length) return fail('clientRouteErrNoSources')
+    const bad = sources.find((x) => !isIpOrCidr(x))
+    if (bad) return fail('clientRouteErrSources', { value: bad })
+  } else {
+    macs = [...new Set(macLines().map((m) => m.replace(/-/g, ':')))]
     if (!macs.length) return fail('clientRouteErrNoMacs')
     const badMac = macs.find((m) => !MAC.test(m))
     if (badMac) return fail('clientRouteErrMacs', { value: badMac })
-    emit('saved', { id: form.id, enabled: form.enabled, name, sources: [...new Set(sources)], outbound: '', bypass: true, macs })
-    isOpen.value = false
-    return
   }
-  if (!form.outbound) return fail('clientRouteErrOutbound')
-  emit('saved', { id: form.id, enabled: form.enabled, name, sources: [...new Set(sources)], outbound: form.outbound })
+  const base = { id: form.id, enabled: form.enabled, name, match: form.match, sources, macs }
+  if (form.mode !== 'route') {
+    emit('saved', { ...base, outbound: '', ...(form.mode === 'admit' ? { admit: true } : { bypass: true }) })
+  } else {
+    if (!form.outbound) return fail('clientRouteErrOutbound')
+    emit('saved', { ...base, outbound: form.outbound })
+  }
   isOpen.value = false
 }
 </script>

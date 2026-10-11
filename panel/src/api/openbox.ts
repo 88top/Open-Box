@@ -199,6 +199,10 @@ export interface OpenboxClientRoute {
   // 不进内核:按 MAC 在入口就放行(sing-box 1.14 的 exclude_mac_address,需要 auto_redirect),像 OpenClash 的黑名单
   bypass?: boolean
   macs?: string[]
+  // 按什么认终端:ip(sources)或 mac(macs);老档案没有这个字段
+  match?: 'ip' | 'mac'
+  // 只让这些终端进内核(白名单):不指定出口,只决定谁进内核
+  admit?: boolean
 }
 
 // 链式代理:一个节点不直接拨号,而是经另一个节点 / 节点组去连(内核里的 detour),见 server/engine/chain-proxy.mjs。
