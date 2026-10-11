@@ -2,52 +2,15 @@
   <!-- 顶部总卡片:标识 / 平台 / 版本 / 状态 / 启停 / 更新 都在这一张里 -->
   <div class="kernel-top card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <!-- 标题行:Open-Box 标识 + 面板版本号 + GitHub(整块是链接)、使用教程;右边是需要注意的提示 -->
+      <!-- 标题行:只放 Open-Box 标识;右边是需要注意的提示 -->
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <a
-          href="https://github.com/liandu2024/Open-Box"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:bg-base-200 inline-flex items-center gap-2 rounded-lg px-2 py-1"
-          v-tip="$t('openboxGithubHint')"
-        >
+        <div class="inline-flex items-center px-2 py-1">
           <img
             :src="logoUrl"
             class="app-logo h-5 w-auto"
             alt="Open-Box"
           />
-          <span class="font-mono text-sm">{{ updateInfo?.version || '—' }}</span>
-          <GithubIcon class="h-4 w-4" />
-          <span class="text-sm">GitHub</span>
-          <ArrowTopRightOnSquareIcon class="text-base-content/50 h-3.5 w-3.5" />
-        </a>
-        <a
-          :href="TUTORIAL_URL"
-          target="_blank"
-          rel="noopener noreferrer"
-          class="hover:bg-base-200 inline-flex items-center gap-2 rounded-lg px-2 py-1"
-          v-tip="$t('tutorialHint')"
-        >
-          <svg
-            viewBox="0 0 24 24"
-            class="h-5 w-5"
-            aria-hidden="true"
-          >
-            <rect
-              x="1"
-              y="4.5"
-              width="22"
-              height="15"
-              rx="4.5"
-              fill="#ff0000"
-            />
-            <path
-              d="M10 8.8v6.4l5.4-3.2z"
-              fill="#fff"
-            />
-          </svg>
-          <span class="text-sm">{{ $t('tutorialButton') }}</span>
-        </a>
+        </div>
         <ExclamationTriangleIcon
           v-if="warnTip"
           class="text-warning ml-auto h-5 w-5 shrink-0"
@@ -299,12 +262,9 @@ import {
 import { computed, onMounted } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-// 「使用教程」跳转的地址:上游是一个 YouTube 操作演示列表,这里先指向仓库说明,换成视频列表地址即可
-const TUTORIAL_URL = 'https://github.com/liandu2024/Open-Box#readme'
-
 const { t } = useI18n()
 
-// 标题行右边的版本号、Geo 数据、安装通道都来自更新状态(同卡的更新区也会拉;这里没有就自己拉一次)
+// Geo 数据、安装通道都来自更新状态(同卡的更新区也会拉;这里没有就自己拉一次)
 onMounted(() => {
   if (!updateInfo.value) void refreshUpdateInfo()
 })
