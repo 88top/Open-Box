@@ -8,7 +8,7 @@
     >
       <button
         type="button"
-        class="btn btn-circle btn-sm"
+        class="btn btn-primary btn-circle btn-sm"
         v-tip="$t('serverAdd')"
         :aria-label="$t('serverAdd')"
         @click="openCreate"
@@ -33,11 +33,18 @@
 
         <div
           v-else-if="!servers.length"
-          class="card"
+          class="flex flex-col items-center gap-3 py-16"
         >
-          <div class="app-card-inset text-base-content/50 text-sm">
-            {{ $t('serverEmpty') }}
-          </div>
+          <ShareIcon class="text-base-content/30 h-8 w-8" />
+          <p class="text-base-content/60 text-sm">{{ $t('serverEmpty') }}</p>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm rounded-full"
+            @click="openCreate"
+          >
+            <PlusIcon class="h-4 w-4" />
+            {{ $t('serverAdd') }}
+          </button>
         </div>
 
         <!-- 拖拽排序:内核里的入站顺序跟着它 -->
@@ -152,6 +159,7 @@ import {
   PencilSquareIcon,
   PlusIcon,
   PowerIcon,
+  ShareIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline'
 import { computed, onMounted, ref } from 'vue'

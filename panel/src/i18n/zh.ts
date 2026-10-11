@@ -1247,7 +1247,7 @@ const zh: LANG_MESSAGE = {
   // 设置 · 共享网络
   shareNetworkTab: '共享网络',
   serverAdd: '添加服务器',
-  serverEmpty: '还没有服务器,点右上角 + 创建一个。',
+  serverEmpty: '还没有服务器。',
   serverAddTitle: '添加服务器',
   serverEditTitle: '编辑服务器',
   serverNameLabel: '备注',
