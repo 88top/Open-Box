@@ -42,7 +42,7 @@
   "config/low-latency": "500",
   "config/manage-hidden-group-mode": "false",
   "config/medium-latency": "1000",
-  "config/min-proxy-card-width": "145",
+  "config/node-card-min-width": "155",
   "config/number-of-charts-in-sidebar": "1",
   "config/overview-card-order": "[{\"card\":\"ChartsCard\",\"visible\":true},{\"card\":\"NetworkCard\",\"visible\":true},{\"card\":\"ProviderTrafficOverview\",\"visible\":true},{\"card\":\"TopologyCharts\",\"visible\":true},{\"card\":\"ConnectionHistory\",\"visible\":true},{\"card\":\"RuleHitCountCard\",\"visible\":true}]",
   "config/proxy-card-size": "large",
