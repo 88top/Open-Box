@@ -30,7 +30,7 @@
           <span class="flex min-w-0 flex-col">
             <span class="flex flex-wrap items-baseline gap-x-1.5">
               <span
-                class="truncate leading-5 font-medium"
+                class="truncate text-sm leading-5 font-medium"
                 :class="!tile.available && 'text-base-content/50'"
               >
                 {{ tile.name }}
