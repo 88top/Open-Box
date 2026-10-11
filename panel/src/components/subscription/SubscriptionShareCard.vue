@@ -50,7 +50,7 @@
   <DialogWrapper v-model="dialogOpen" :title="editing ? '编辑订阅分享' : '新增订阅分享'" box-class="w-full max-w-3xl">
     <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
       <div class="flex min-h-0 flex-col gap-2">
-        <div class="text-xs font-medium">选择要分享的订阅节点</div>
+        <div class="text-xs font-medium">选择要分享的订阅</div>
         <div class="max-h-80 overflow-y-auto pr-1">
           <label v-for="sub in subscriptions" :key="sub.id" class="border-base-content/10 flex items-center gap-2 border-b py-2 text-sm first:border-t">
             <input v-model="form.subscriptionIds" type="checkbox" class="checkbox checkbox-sm" :value="sub.id" />
@@ -60,7 +60,7 @@
         <p v-if="!subscriptions.length" class="text-base-content/55 text-xs">请先添加至少一条订阅</p>
       </div>
       <div class="flex flex-col gap-3">
-        <label class="flex flex-col gap-1"><span class="text-xs font-medium">标题</span><input v-model="form.name" class="input input-sm w-full" placeholder="例如：手机代理订阅" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs font-medium">标题</span><input v-model="form.name" class="input input-sm w-full" placeholder="例如:手机代理订阅" /></label>
         <label class="flex flex-col gap-1"><span class="text-xs font-medium">域名或 IP</span><div class="join w-full"><select v-model="form.protocol" class="select select-sm join-item"><option value="http">http://</option><option value="https">https://</option></select><input v-model="form.host" class="input input-sm join-item min-w-0 flex-1 font-mono" placeholder="当前地址" /></div></label>
         <div class="flex flex-col gap-1">
           <label class="text-xs font-medium">分享链接</label>
@@ -71,8 +71,14 @@
         </div>
         <label v-if="editing" class="flex cursor-pointer items-center gap-2 text-xs"><input v-model="renewToken" type="checkbox" class="checkbox checkbox-xs" />重新生成链接(旧链接立即失效)</label>
         <img v-if="qrDataUrl" :src="qrDataUrl" alt="订阅分享二维码" class="h-44 w-44 self-center rounded-lg bg-white p-1" />
-        <p v-if="!generatedShare" class="text-base-content/60 text-xs">{{ editing && renewToken ? '保存后生成新的地址和二维码' : '保存后此地址和二维码生效' }}</p>
-        <div class="flex justify-end gap-2 pt-1"><button type="button" class="btn btn-sm" @click="dialogOpen = false">取消</button><button type="button" class="btn btn-primary btn-sm" :disabled="busy" @click="save"><span v-if="busy" class="loading loading-spinner loading-xs" />保存并生成</button></div>
+        <p v-if="editing && renewToken && !generatedShare" class="text-base-content/60 text-xs">保存后生成新的地址和二维码</p>
+      </div>
+    </div>
+    <!-- 底栏:与 v0.1.311 一致,上沿一条通栏分隔线;没选订阅或没填标题时「保存」不可点 -->
+    <div class="border-base-content/10 -mx-4 -mb-4 mt-4 border-t px-4 pt-3 pb-2">
+      <div class="flex justify-end gap-2">
+        <button type="button" class="btn btn-sm" @click="dialogOpen = false">取消</button>
+        <button type="button" class="btn btn-primary btn-sm" :disabled="busy || !form.name.trim() || !form.subscriptionIds.length" @click="save"><span v-if="busy" class="loading loading-spinner loading-xs" />保存</button>
       </div>
     </div>
   </DialogWrapper>
