@@ -26,16 +26,16 @@
 
     <div
       v-else-if="!chains.length"
-      class="flex flex-col items-center gap-4 px-4 py-16 text-center"
+      class="flex flex-col items-center gap-3 py-14 text-center"
     >
-      <LinkIcon class="text-base-content/30 h-14 w-14" />
+      <LinkIcon class="text-base-content/30 h-10 w-10" />
       <p class="text-base-content/60 text-sm">{{ $t('chainEmpty') }}</p>
       <button
         type="button"
-        class="btn btn-primary rounded-full"
+        class="btn btn-primary btn-sm"
         @click="openEditor(null)"
       >
-        <PlusIcon class="h-5 w-5" />
+        <PlusIcon class="h-4 w-4" />
         {{ $t('chainProxyAdd') }}
       </button>
     </div>
