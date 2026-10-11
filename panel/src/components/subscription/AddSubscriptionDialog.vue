@@ -143,7 +143,7 @@
             </template>
             <button
               type="button"
-              class="btn btn-ghost btn-xs ml-auto"
+              class="btn btn-ghost btn-xs text-base-content/60 ml-auto font-normal"
               :aria-expanded="nodeDnsOpen"
               @click="nodeDnsOpen = !nodeDnsOpen"
             >
@@ -233,7 +233,8 @@
       </div>
     </div>
 
-    <div class="mt-5 flex flex-col gap-2">
+    <!-- 底栏:与 v0.1.311 一致,上沿一条分隔线,通栏(抵消弹窗内容区的 p-4),留出与内容之间的间距 -->
+    <div class="border-base-content/10 -mx-4 -mb-4 mt-10 border-t px-4 py-2">
       <div class="flex justify-end gap-2">
         <button
           type="button"
