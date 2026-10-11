@@ -2,6 +2,7 @@ import type { LANG_MESSAGE } from './en'
 import { dnsFilterZh } from './dns-filter'
 import { dnsPageZh } from './dns-page'
 import { kernelSettingsZh } from './kernel-settings'
+import { clientAppPageZh } from './client-app-page'
 
 const zh: LANG_MESSAGE = {
   ...dnsFilterZh,
@@ -1393,6 +1394,7 @@ const zh: LANG_MESSAGE = {
   probeOverloaded: '测速跟不上:每秒要测约 {demand} 个,内核每秒测完约 {done} 个,检测会变慢;可减少组里的节点或加大检测间隔。',
   listSeparator: '、',
   ...dnsPageZh,
+  ...clientAppPageZh,
 }
 
 export default zh

@@ -6,6 +6,7 @@
       :style="padding"
     >
       <div class="flex flex-col gap-2 px-2 pb-2 md:py-2">
+        <ClientDownloadsCard />
         <div
           v-if="loading"
           class="flex justify-center py-14"
@@ -13,16 +14,13 @@
           <span class="loading loading-spinner loading-md" />
         </div>
         <template v-else-if="info">
-          <AppCodeCard :info="info" />
-          <ShareServerCodesCard :info="info" />
-          <ShareRegionsCard
-            :info="info"
-            @saved="load"
-          />
-          <ServerInfoCard
-            :info="info"
-            @saved="load"
-          />
+          <RouterIdentityCard :info="info" />
+          <div class="card">
+            <ShareRegionsList :info="info" @saved="load" />
+            <div class="border-base-300/60 mx-4 border-t" />
+            <ShareNodeCodesCard :info="info" />
+          </div>
+          <LocalRoutingCard :info="info" />
         </template>
       </div>
     </div>
@@ -31,10 +29,11 @@
 
 <script setup lang="ts">
 import { fetchClientAppInfo, type OpenboxClientAppInfo } from '@/api/clientApp'
-import AppCodeCard from '@/components/clientapp/AppCodeCard.vue'
-import ServerInfoCard from '@/components/clientapp/ServerInfoCard.vue'
-import ShareRegionsCard from '@/components/clientapp/ShareRegionsCard.vue'
-import ShareServerCodesCard from '@/components/clientapp/ShareServerCodesCard.vue'
+import ClientDownloadsCard from '@/components/clientapp/ClientDownloadsCard.vue'
+import LocalRoutingCard from '@/components/clientapp/LocalRoutingCard.vue'
+import RouterIdentityCard from '@/components/clientapp/RouterIdentityCard.vue'
+import ShareNodeCodesCard from '@/components/clientapp/ShareNodeCodesCard.vue'
+import ShareRegionsList from '@/components/clientapp/ShareRegionsList.vue'
 import { usePaddingForViews } from '@/composables/paddingViews'
 import { showNotification } from '@/helper/notification'
 import { onMounted, ref } from 'vue'

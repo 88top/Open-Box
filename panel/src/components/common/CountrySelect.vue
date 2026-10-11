@@ -12,11 +12,12 @@
       @keydown.enter.prevent="toggle"
     >
       <CountryFlag
-        :code="modelValue"
+        :code="modelValue || placeholderFlag"
         :size="16"
         :title="label"
       />
       <span
+        v-if="!iconOnly"
         class="min-w-0 flex-1 truncate text-left"
         :class="{ 'text-base-content/40': !label }"
       >
@@ -185,6 +186,10 @@ const props = defineProps<{
   // 只给这些国家可选(按给定顺序,不再按名字排)。调用方用它把范围收窄到
   // "当前节点里真有的国家"——给一个选了也没用的选项没有意义。
   only?: string[]
+  // 只显示图标、不显示名称(路由器标识里的图标选择器用)
+  iconOnly?: boolean
+  // 没选时,占位文字前面显示的图标代码
+  placeholderFlag?: string
 }>()
 
 const emit = defineEmits<{ 'update:modelValue': [string] }>()
