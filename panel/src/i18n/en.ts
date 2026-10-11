@@ -1,5 +1,6 @@
 import { dnsFilterEn } from './dns-filter'
 import { dnsPageEn } from './dns-page'
+import { subscriptionDnsEn } from './subscription-dns'
 const en = {
   ...dnsFilterEn,
   overview: 'Overview',
@@ -1407,6 +1408,7 @@ const en = {
   probeOverloaded: 'Tests cannot keep up: about {demand} needed per second, the core finishes about {done}. Checks will lag; use fewer nodes or longer intervals.',
   listSeparator: ', ',
   ...dnsPageEn,
+  ...subscriptionDnsEn,
 }
 
 export type LANG_MESSAGE = typeof en

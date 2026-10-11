@@ -141,11 +141,51 @@
                 >{{ String(h - 1).padStart(2, '0') }}:00</option>
               </select>
             </template>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs ml-auto"
+              :aria-expanded="nodeDnsOpen"
+              @click="nodeDnsOpen = !nodeDnsOpen"
+            >
+              {{ $t('subscriptionNodeDnsToggle') }}
+              <component
+                :is="nodeDnsOpen ? ChevronUpIcon : ChevronDownIcon"
+                class="h-3.5 w-3.5"
+              />
+            </button>
           </div>
           <p
             v-if="autoUpdate.enabled"
             class="text-base-content/50 text-xs"
           >{{ $t('subscriptionAutoUpdateHint') }}</p>
+
+          <!-- 订阅 DNS 解析:机场要求节点域名用它自己的 DoH 解析时填(相当于 OpenClash 的
+               proxy-server-nameserver / nameserver-policy)。只解析这份订阅的节点服务器域名 -->
+          <div
+            v-if="nodeDnsOpen"
+            class="flex flex-col gap-1 pt-1"
+          >
+            <label class="text-xs font-medium">{{ $t('subscriptionNodeDnsLabel') }}</label>
+            <div class="flex flex-wrap items-center gap-2">
+              <input
+                v-model.trim="nodeDnsUrl"
+                type="text"
+                class="input input-sm min-w-0 flex-[3] font-mono"
+                :placeholder="$t('subscriptionNodeDnsUrlPlaceholder')"
+                autocomplete="off"
+                spellcheck="false"
+              />
+              <input
+                v-model.trim="nodeDnsBootstrap"
+                type="text"
+                class="input input-sm min-w-0 flex-[2] font-mono"
+                :placeholder="$t('subscriptionNodeDnsBootstrapPlaceholder')"
+                autocomplete="off"
+                spellcheck="false"
+              />
+            </div>
+            <p class="text-base-content/50 text-xs">{{ $t('subscriptionNodeDnsHint') }}</p>
+          </div>
         </div>
 
         <div
@@ -223,7 +263,7 @@
 import type { OpenboxRenameOptions, OpenboxSubscription, OpenboxSubscriptionAutoUpdate, OpenboxSubscriptionPreview } from '@/api/openbox'
 import { createSubscription, previewSubscription, updateSubscription } from '@/api/openbox'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
-import { PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { debounce } from 'lodash'
 import { showNotification } from '@/helper/notification'
 import { notifySubscriptionSaved } from '@/store/openboxSubscriptions'
@@ -282,6 +322,11 @@ const initialAutoUpdate = (): OpenboxSubscriptionAutoUpdate => ({
   hour: props.subscription?.autoUpdate?.hour ?? 4,
 })
 const autoUpdate = ref<OpenboxSubscriptionAutoUpdate>(initialAutoUpdate())
+
+// 订阅 DNS 解析(DoH):没配就都留空;展开状态默认展开
+const nodeDnsUrl = ref(props.subscription?.nodeDns?.url ?? '')
+const nodeDnsBootstrap = ref(props.subscription?.nodeDns?.bootstrap ?? '')
+const nodeDnsOpen = ref(true)
 
 const renameOptions = ref<OpenboxRenameOptions>({})
 const handleRenameOptionsChange = (value: OpenboxRenameOptions) => {
@@ -398,6 +443,8 @@ const resetForm = () => {
   name.value = props.subscription?.name ?? ''
   urls.value = initialUrls()
   autoUpdate.value = initialAutoUpdate()
+  nodeDnsUrl.value = props.subscription?.nodeDns?.url ?? ''
+  nodeDnsBootstrap.value = props.subscription?.nodeDns?.bootstrap ?? ''
   content.value = props.subscription?.content ?? ''
   overrides.value = { ...(props.subscription?.renameOptions?.overrides || {}) }
   disabledTags.value = [...(props.subscription?.renameOptions?.disabled || [])]
@@ -429,6 +476,11 @@ const handleSave = async () => {
       renameOptions: effectiveRenameOptions.value,
       // 粘贴来的订阅没有地址可回源,计划一律关
       autoUpdate: sourceMode.value === 'url' ? autoUpdate.value : { enabled: false, days: 1, hour: 4 },
+      // 地址留空 = 不用专用解析器(服务端存成没有);只填了一边时交给服务端校验并提示
+      nodeDns:
+        sourceMode.value === 'url' && (nodeDnsUrl.value || nodeDnsBootstrap.value)
+          ? { url: nodeDnsUrl.value, ...(nodeDnsBootstrap.value ? { bootstrap: nodeDnsBootstrap.value } : {}) }
+          : null,
     }
     const res = props.subscription
       ? await updateSubscription(props.subscription.id, payload)

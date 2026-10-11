@@ -19,8 +19,8 @@
           </h2>
           <p class="text-base-content/55 mt-1 text-xs">生成可供其他设备或代理软件直接使用的订阅链接</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm" @click.stop="openCreate">
-          <PlusIcon class="h-4 w-4" /> 添加
+        <button type="button" class="btn btn-primary btn-sm btn-square" v-tip="'添加'" aria-label="添加" @click.stop="openCreate">
+          <PlusIcon class="h-4 w-4" />
         </button>
       </div>
     </template>

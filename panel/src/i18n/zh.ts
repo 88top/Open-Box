@@ -3,6 +3,7 @@ import { dnsFilterZh } from './dns-filter'
 import { dnsPageZh } from './dns-page'
 import { kernelSettingsZh } from './kernel-settings'
 import { clientAppPageZh } from './client-app-page'
+import { subscriptionDnsZh } from './subscription-dns'
 
 const zh: LANG_MESSAGE = {
   ...dnsFilterZh,
@@ -1426,6 +1427,7 @@ const zh: LANG_MESSAGE = {
   listSeparator: '、',
   ...dnsPageZh,
   ...clientAppPageZh,
+  ...subscriptionDnsZh,
 }
 
 export default zh

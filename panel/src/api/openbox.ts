@@ -302,6 +302,9 @@ export interface OpenboxSubscriptionAutoUpdate {
   hour: number
 }
 
+// url 是 https:// 的 DoH 地址;地址里是域名时 bootstrap 必填(用来解析这个域名的 DNS,IP)
+export interface OpenboxSubscriptionNodeDns { url: string; bootstrap?: string }
+
 export interface OpenboxSubscription {
   id: string
   name: string
@@ -316,6 +319,8 @@ export interface OpenboxSubscription {
   format: string
   nodeCount: number
   renameOptions?: OpenboxRenameOptions
+  // 这份订阅的节点域名专用解析(DoH);没配就是没有这个字段
+  nodeDns?: OpenboxSubscriptionNodeDns | null
   createdAt: number
   updatedAt: number
 }
@@ -538,6 +543,7 @@ export const createSubscription = async (payload: {
   name: string
   renameOptions?: OpenboxRenameOptions
   autoUpdate?: OpenboxSubscriptionAutoUpdate
+  nodeDns?: OpenboxSubscriptionNodeDns | null
 }): Promise<OpenboxSubscriptionSaveResult> => {
   return requestJson('/api/openbox/subscriptions', {
     method: 'POST',
@@ -550,7 +556,7 @@ export const createSubscription = async (payload: {
 // so a plain rename works even while the provider is unreachable (see subscriptions.mjs PATCH).
 export const updateSubscription = async (
   id: string,
-  payload: { name?: string; url?: string; urls?: string[]; content?: string; renameOptions?: OpenboxRenameOptions; autoUpdate?: OpenboxSubscriptionAutoUpdate; enabled?: boolean },
+  payload: { name?: string; url?: string; urls?: string[]; content?: string; renameOptions?: OpenboxRenameOptions; autoUpdate?: OpenboxSubscriptionAutoUpdate; nodeDns?: OpenboxSubscriptionNodeDns | null; enabled?: boolean },
 ): Promise<OpenboxSubscriptionSaveResult> => {
   return requestJson(`/api/openbox/subscriptions/${encodeURIComponent(id)}`, {
     method: 'PATCH',
