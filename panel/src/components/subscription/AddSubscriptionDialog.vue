@@ -143,7 +143,7 @@
             </template>
             <button
               type="button"
-              class="btn btn-ghost btn-xs text-base-content/80 ml-auto font-normal"
+              class="btn btn-ghost btn-xs text-base-content/90 ml-auto font-normal"
               :aria-expanded="nodeDnsOpen"
               @click="nodeDnsOpen = !nodeDnsOpen"
             >
