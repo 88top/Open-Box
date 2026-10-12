@@ -216,7 +216,7 @@ const loadShares = async () => {
     shares.value = await fetchSubscriptionShares()
   } catch (error) {
     showNotification({
-      content: '订阅分享加载失败',
+      content: 'subShareLoadFailed',
       type: 'alert-error',
       params: { message: error instanceof Error ? error.message : String(error) },
     })

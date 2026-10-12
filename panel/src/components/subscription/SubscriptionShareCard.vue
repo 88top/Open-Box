@@ -7,7 +7,7 @@
       <div class="flex flex-wrap items-center justify-between gap-2">
         <div>
           <h2 class="flex items-center gap-1 text-base font-semibold">
-            订阅分享
+            {{ $t('subShareTitle') }}
             <ChevronUpIcon
               v-if="shareExpanded"
               class="h-4 w-4"
@@ -17,9 +17,9 @@
               class="h-4 w-4"
             />
           </h2>
-          <p class="text-base-content/55 mt-1 text-xs">生成可供其他设备或代理软件直接使用的订阅链接</p>
+          <p class="text-base-content/55 mt-1 text-xs">{{ $t('subShareDescription') }}</p>
         </div>
-        <button type="button" class="btn btn-primary btn-sm btn-square" v-tip="'添加'" aria-label="添加" @click.stop="openCreate">
+        <button type="button" class="btn btn-primary btn-sm btn-square" v-tip="$t('subShareAdd')" :aria-label="$t('subShareAdd')" @click.stop="openCreate">
           <PlusIcon class="h-4 w-4" />
         </button>
       </div>
@@ -27,7 +27,7 @@
 
     <template #content>
       <div v-if="!shares.length" class="text-base-content/55 py-3 text-center text-sm">
-        暂无订阅分享，点击右上角“添加”创建
+        {{ $t('subShareEmpty') }}
       </div>
       <div v-else class="divide-base-content/10 divide-y">
         <div v-for="share in shares" :key="share.id" class="flex flex-wrap items-center gap-3 py-3 first:pt-1 last:pb-1" :class="share.enabled === false && 'opacity-50'">
@@ -36,49 +36,49 @@
           <div class="text-base-content/55 mt-1 truncate font-mono text-xs">{{ shareUrl(share) }}</div>
         </div>
         <div class="flex items-center gap-2">
-          <button type="button" class="btn btn-ghost btn-sm btn-square" title="启用/停用" :class="share.enabled === false ? 'text-base-content/40' : 'text-success'" @click="toggle(share)"><PowerIcon class="h-4 w-4" /></button>
-          <button type="button" class="btn btn-ghost btn-sm btn-square" title="复制链接" @click="copy(shareUrl(share))"><ClipboardDocumentIcon class="h-4 w-4" /></button>
-          <button type="button" class="btn btn-ghost btn-sm btn-square" title="重新生成" :disabled="busy" @click="regenerate(share)"><ArrowPathIcon class="h-4 w-4" /></button>
-          <button type="button" class="btn btn-ghost btn-sm btn-square" title="编辑" @click="openEdit(share)"><PencilSquareIcon class="h-4 w-4" /></button>
-          <button type="button" class="btn btn-ghost btn-sm btn-square hover:text-error" title="删除" @click="remove(share)"><TrashIcon class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-ghost btn-sm btn-square" :title="$t('subShareToggle')" :class="share.enabled === false ? 'text-base-content/40' : 'text-success'" @click="toggle(share)"><PowerIcon class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-ghost btn-sm btn-square" :title="$t('copyLink')" @click="copy(shareUrl(share))"><ClipboardDocumentIcon class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-ghost btn-sm btn-square" :title="$t('subShareRegenerate')" :disabled="busy" @click="regenerate(share)"><ArrowPathIcon class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-ghost btn-sm btn-square" :title="$t('edit')" @click="openEdit(share)"><PencilSquareIcon class="h-4 w-4" /></button>
+          <button type="button" class="btn btn-ghost btn-sm btn-square hover:text-error" :title="$t('delete')" @click="remove(share)"><TrashIcon class="h-4 w-4" /></button>
         </div>
         </div>
       </div>
     </template>
   </CollapseCard>
 
-  <DialogWrapper v-model="dialogOpen" :title="editing ? '编辑订阅分享' : '新增订阅分享'" box-class="w-full max-w-3xl">
+  <DialogWrapper v-model="dialogOpen" :title="$t(editing ? 'subShareEditTitle' : 'subShareAddTitle')" box-class="w-full max-w-3xl">
     <div class="grid gap-5 md:grid-cols-[minmax(0,1fr)_minmax(280px,0.9fr)]">
       <div class="flex min-h-0 flex-col gap-2">
-        <div class="text-xs font-medium">选择要分享的订阅</div>
+        <div class="text-xs font-medium">{{ $t('subShareSelect') }}</div>
         <div class="max-h-80 overflow-y-auto pr-1">
           <label v-for="sub in subscriptions" :key="sub.id" class="border-base-content/10 flex items-center gap-2 border-b py-2 text-sm first:border-t">
             <input v-model="form.subscriptionIds" type="checkbox" class="checkbox checkbox-sm" :value="sub.id" />
-            <span class="min-w-0 flex-1 truncate">{{ sub.name }}</span><span class="text-base-content/50 text-xs">{{ sub.nodeCount }} 个节点</span>
+            <span class="min-w-0 flex-1 truncate">{{ sub.name }}</span><span class="text-base-content/50 text-xs">{{ $t('subShareNodeCount', { count: sub.nodeCount }) }}</span>
           </label>
         </div>
-        <p v-if="!subscriptions.length" class="text-base-content/55 text-xs">请先添加至少一条订阅</p>
+        <p v-if="!subscriptions.length" class="text-base-content/55 text-xs">{{ $t('subShareNeedSub') }}</p>
       </div>
       <div class="flex flex-col gap-3">
-        <label class="flex flex-col gap-1"><span class="text-xs font-medium">标题</span><input v-model="form.name" class="input input-sm w-full" placeholder="例如:手机代理订阅" /></label>
-        <label class="flex flex-col gap-1"><span class="text-xs font-medium">域名或 IP</span><div class="join w-full"><select v-model="form.protocol" class="select select-sm join-item"><option value="http">http://</option><option value="https">https://</option></select><input v-model="form.host" class="input input-sm join-item min-w-0 flex-1 font-mono" placeholder="当前地址" /></div></label>
+        <label class="flex flex-col gap-1"><span class="text-xs font-medium">{{ $t('subShareNameLabel') }}</span><input v-model="form.name" class="input input-sm w-full" :placeholder="$t('subShareNamePlaceholder')" /></label>
+        <label class="flex flex-col gap-1"><span class="text-xs font-medium">{{ $t('subShareHostLabel') }}</span><div class="join w-full"><select v-model="form.protocol" class="select select-sm join-item"><option value="http">http://</option><option value="https">https://</option></select><input v-model="form.host" class="input input-sm join-item min-w-0 flex-1 font-mono" :placeholder="$t('subShareHostPlaceholder')" /></div></label>
         <div class="flex flex-col gap-1">
-          <label class="text-xs font-medium">分享链接</label>
+          <label class="text-xs font-medium">{{ $t('subShareLinkLabel') }}</label>
           <div class="join w-full">
             <input :value="displayUrl" readonly class="input input-sm join-item min-w-0 flex-1 font-mono text-xs" />
-            <button type="button" class="btn btn-sm join-item" v-tip="'复制链接'" @click="copy(displayUrl)"><ClipboardDocumentIcon class="h-4 w-4" /></button>
+            <button type="button" class="btn btn-sm join-item" v-tip="$t('copyLink')" @click="copy(displayUrl)"><ClipboardDocumentIcon class="h-4 w-4" /></button>
           </div>
         </div>
-        <label v-if="editing" class="flex cursor-pointer items-center gap-2 text-xs"><input v-model="renewToken" type="checkbox" class="checkbox checkbox-xs" />重新生成链接(旧链接立即失效)</label>
-        <img v-if="qrDataUrl" :src="qrDataUrl" alt="订阅分享二维码" class="h-44 w-44 self-center rounded-lg bg-white p-1" />
-        <p v-if="editing && renewToken && !generatedShare" class="text-base-content/60 text-xs">保存后生成新的地址和二维码</p>
+        <label v-if="editing" class="flex cursor-pointer items-center gap-2 text-xs"><input v-model="renewToken" type="checkbox" class="checkbox checkbox-xs" />{{ $t('subShareRenew') }}</label>
+        <img v-if="qrDataUrl" :src="qrDataUrl" :alt="$t('subShareQrAlt')" class="h-44 w-44 self-center rounded-lg bg-white p-1" />
+        <p v-if="editing && renewToken && !generatedShare" class="text-base-content/60 text-xs">{{ $t('subShareRenewHint') }}</p>
       </div>
     </div>
     <!-- 底栏:与 v0.1.311 一致,上沿一条通栏分隔线;没选订阅或没填标题时「保存」不可点 -->
     <div class="border-base-content/10 -mx-4 -mb-4 mt-4 border-t px-4 pt-3 pb-2">
       <div class="flex justify-end gap-2">
-        <button type="button" class="btn btn-sm" @click="dialogOpen = false">取消</button>
-        <button type="button" class="btn btn-primary btn-sm" :disabled="busy || !form.name.trim() || !form.subscriptionIds.length" @click="save"><span v-if="busy" class="loading loading-spinner loading-xs" />保存</button>
+        <button type="button" class="btn btn-sm" @click="dialogOpen = false">{{ $t('cancel') }}</button>
+        <button type="button" class="btn btn-primary btn-sm" :disabled="busy || !form.name.trim() || !form.subscriptionIds.length" @click="save"><span v-if="busy" class="loading loading-spinner loading-xs" />{{ $t('save') }}</button>
       </div>
     </div>
   </DialogWrapper>
@@ -87,6 +87,7 @@
 <script setup lang="ts">
 import QRCode from 'qrcode'
 import { computed, reactive, ref, watch } from 'vue'
+import { useI18n } from 'vue-i18n'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import CollapseCard from '@/components/common/CollapseCard.vue'
 import { collapseGroupMap } from '@/store/settings'
@@ -98,6 +99,7 @@ import { ArrowPathIcon, ChevronDownIcon, ChevronUpIcon, ClipboardDocumentIcon, P
 
 const props = defineProps<{ subscriptions: OpenboxSubscription[]; shares: OpenboxSubscriptionShare[] }>()
 const emit = defineEmits<{ changed: [] }>()
+const { t } = useI18n()
 const COLLAPSE_KEY = 'subscription-share'
 const shareExpanded = computed(() => Boolean(collapseGroupMap.value[COLLAPSE_KEY]))
 const dialogOpen = ref(false)
@@ -140,11 +142,11 @@ const save = async () => {
     const share = editing.value
       ? await updateSubscriptionShare(editing.value.id, { name: form.name, host: form.host, protocol: form.protocol, subscriptionIds: form.subscriptionIds, regenerate: renewToken.value })
       : await createSubscriptionShare({ name: form.name, host: form.host, protocol: form.protocol, subscriptionIds: form.subscriptionIds, token: draftToken.value })
-    await makeQr(share); emit('changed'); dialogOpen.value = false; showNotification({ content: '订阅分享已保存', type: 'alert-success' })
-  } catch (error) { showNotification({ content: '订阅分享保存失败', type: 'alert-error', params: { message: error instanceof Error ? error.message : String(error) } }) } finally { busy.value = false }
+    await makeQr(share); emit('changed'); dialogOpen.value = false; showNotification({ content: 'subShareSaved', type: 'alert-success' })
+  } catch (error) { showNotification({ content: 'subShareSaveFailed', type: 'alert-error', params: { message: error instanceof Error ? error.message : String(error) } }) } finally { busy.value = false }
 }
 const toggle = async (share: OpenboxSubscriptionShare) => { if (busy.value) return; busy.value = true; try { await updateSubscriptionShare(share.id, { name: share.name, host: share.host, protocol: (share.protocol || currentProtocol()) as 'http' | 'https', subscriptionIds: share.subscriptionIds, enabled: share.enabled === false }) ; emit('changed') } finally { busy.value = false } }
 const regenerate = async (share: OpenboxSubscriptionShare) => { if (busy.value) return; busy.value = true; try { await regenerateSubscriptionShare(share.id); emit('changed') } finally { busy.value = false } }
-const remove = async (share: OpenboxSubscriptionShare) => { if (busy.value || !window.confirm(`确定删除“${share.name}”？`)) return; busy.value = true; try { await deleteSubscriptionShare(share.id); emit('changed') } finally { busy.value = false } }
+const remove = async (share: OpenboxSubscriptionShare) => { if (busy.value || !window.confirm(t('subShareDeleteConfirm', { name: share.name }))) return; busy.value = true; try { await deleteSubscriptionShare(share.id); emit('changed') } finally { busy.value = false } }
 const copy = async (value: string) => { const ok = await copyToClipboard(value); showNotification({ content: ok ? 'copySuccess' : 'copyFailed', type: ok ? 'alert-success' : 'alert-error' }) }
 </script>
