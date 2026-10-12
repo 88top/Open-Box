@@ -1,0 +1,40 @@
+// 后端设置页「恢复出厂设置」的文案
+export const factoryResetZh = {
+  factoryResetTitle: '恢复出厂设置',
+  factoryResetIntro: '把 Open-Box 恢复到刚装好时的样子,以下内容会被清空:',
+  factoryResetItemData: '订阅、节点和节点组',
+  factoryResetItemRouting: '目标分流、终端分流、链式代理、共享网络',
+  factoryResetItemPanel: '面板设置、背景图、面板密码和登录状态',
+  factoryResetItemStats: '流量统计',
+  factoryResetAfter: '内核会被停止。完成后重新打开面板,会像第一次那样让你设置密码。',
+  factoryResetWarning: '此操作不可恢复,请先确认已导出备份。',
+  factoryResetConfirm: '恢复出厂设置',
+  factoryResetDone: '已恢复出厂设置,正在重新载入面板',
+  factoryResetFailed: '恢复出厂设置失败:{message}',
+}
+export const factoryResetZhTw = {
+  factoryResetTitle: '恢復原廠設定',
+  factoryResetIntro: '把 Open-Box 恢復到剛安裝好時的樣子,以下內容會被清空:',
+  factoryResetItemData: '訂閱、節點和節點組',
+  factoryResetItemRouting: '目標分流、終端分流、鏈式代理、共享網路',
+  factoryResetItemPanel: '面板設定、背景圖、面板密碼和登入狀態',
+  factoryResetItemStats: '流量統計',
+  factoryResetAfter: '核心會被停止。完成後重新開啟面板,會像第一次那樣讓你設定密碼。',
+  factoryResetWarning: '此操作無法復原,請先確認已匯出備份。',
+  factoryResetConfirm: '恢復原廠設定',
+  factoryResetDone: '已恢復原廠設定,正在重新載入面板',
+  factoryResetFailed: '恢復原廠設定失敗:{message}',
+}
+export const factoryResetEn = {
+  factoryResetTitle: 'Factory reset',
+  factoryResetIntro: 'Restore Open-Box to how it was right after installation. The following will be wiped:',
+  factoryResetItemData: 'Subscriptions, nodes and node groups',
+  factoryResetItemRouting: 'Target routing, client routing, chain proxies, share network',
+  factoryResetItemPanel: 'Panel settings, background image, panel password and login sessions',
+  factoryResetItemStats: 'Traffic statistics',
+  factoryResetAfter: 'The kernel will be stopped. When you reopen the panel it will ask you to set a password, as on first use.',
+  factoryResetWarning: 'This cannot be undone. Make sure you have exported a backup first.',
+  factoryResetConfirm: 'Factory reset',
+  factoryResetDone: 'Factory reset done, reloading the panel',
+  factoryResetFailed: 'Factory reset failed: {message}',
+}

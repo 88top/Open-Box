@@ -2,20 +2,27 @@
   <!-- 顶部总卡片:标识 / 平台 / 版本 / 状态 / 启停 / 更新 都在这一张里 -->
   <div class="kernel-top card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <!-- 标题行:只放 Open-Box 标识;右边是需要注意的提示 -->
+      <!-- 标题行:Open-Box 标识 + 版本号;右边是需要注意的提示和「恢复出厂设置」 -->
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div class="inline-flex items-center px-2 py-1">
+        <div class="inline-flex items-center gap-2 px-2 py-1">
           <img
             :src="logoUrl"
             class="app-logo h-5 w-auto"
             alt="Open-Box"
           />
+          <span
+            v-if="openboxVersion"
+            class="font-mono text-base"
+          >{{ openboxVersion }}</span>
         </div>
-        <ExclamationTriangleIcon
-          v-if="warnTip"
-          class="text-warning ml-auto h-5 w-5 shrink-0"
-          v-tip="warnTip"
-        />
+        <div class="ml-auto flex items-center gap-2">
+          <ExclamationTriangleIcon
+            v-if="warnTip"
+            class="text-warning h-5 w-5 shrink-0"
+            v-tip="warnTip"
+          />
+          <FactoryResetButton />
+        </div>
       </div>
 
       <!-- 平台:本机跑在哪种系统上高亮,另一种只列支持的系统 -->
@@ -237,6 +244,7 @@
 import type { OpenboxKernelVersion, OpenboxProfile, OpenboxServiceStatus } from '@/api/openbox'
 import GithubIcon from '@/components/common/GithubIcon.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import FactoryResetButton from '@/components/kernel/FactoryResetButton.vue'
 import OpenboxUpdateCard from '@/components/kernel/OpenboxUpdateCard.vue'
 import PlatformIcon from '@/components/kernel/PlatformIcon.vue'
 import {
@@ -290,6 +298,12 @@ const runKernelAction = async (action: Parameters<typeof run>[0]) => {
   await run(action)
   emit('refresh')
 }
+
+// Open-Box 自己的版本号(来自更新状态,标题行显示成 v0.1.317 这种)
+const openboxVersion = computed(() => {
+  const raw = updateInfo.value?.version || ''
+  return raw ? `v${raw.replace(/^v/i, '')}` : ''
+})
 
 // 内核版本:新服务端读到的是「1.14.1-xxx」,界面统一写成「sing-box version …」
 const kernelText = computed(() => {

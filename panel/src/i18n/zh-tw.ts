@@ -4,6 +4,7 @@ import { dnsPageZhTw } from './dns-page'
 import { kernelSettingsZhTw } from './kernel-settings'
 import { clientAppPageZhTw } from './client-app-page-tw'
 import { subscriptionDnsZhTw } from './subscription-dns'
+import { factoryResetZhTw } from './factory-reset'
 
 const zhTW: LANG_MESSAGE = {
   chainProxyAdd: '新增鏈式代理',
@@ -1463,6 +1464,7 @@ const zhTW: LANG_MESSAGE = {
   ...dnsPageZhTw,
   ...clientAppPageZhTw,
   ...subscriptionDnsZhTw,
+  ...factoryResetZhTw,
 }
 
 export default zhTW

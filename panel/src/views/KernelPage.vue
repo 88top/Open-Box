@@ -171,6 +171,10 @@ onMounted(async () => {
 .kernel-group > .card + .card {
   border-top: 1px solid color-mix(in oklab, currentColor 10%, transparent) !important;
 }
+/* 每张设置卡片里,标题和它下面的说明之间再空出 4px,与上游 v0.1.317 一致 */
+.kernel-group .card-body > div:first-child > p {
+  margin-top: 0.25rem;
+}
 /* 这一页的按钮、输入框、下拉、黑白名单切换统一用胶囊形,和上游一致。
    主题自己也在管这些控件的圆角,不加 !important 压不住 */
 .kernel-top .btn,

@@ -1,6 +1,7 @@
 import { dnsFilterEn } from './dns-filter'
 import { dnsPageEn } from './dns-page'
 import { subscriptionDnsEn } from './subscription-dns'
+import { factoryResetEn } from './factory-reset'
 const en = {
   chainProxyAdd: 'Add chain proxy',
   chainProxyNameLabel: 'Name',
@@ -1491,6 +1492,7 @@ const en = {
   listSeparator: ', ',
   ...dnsPageEn,
   ...subscriptionDnsEn,
+  ...factoryResetEn,
 }
 
 export type LANG_MESSAGE = typeof en

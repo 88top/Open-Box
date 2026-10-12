@@ -4,6 +4,7 @@ import { dnsPageZh } from './dns-page'
 import { kernelSettingsZh } from './kernel-settings'
 import { clientAppPageZh } from './client-app-page'
 import { subscriptionDnsZh } from './subscription-dns'
+import { factoryResetZh } from './factory-reset'
 
 const zh: LANG_MESSAGE = {
   ...dnsFilterZh,
@@ -1453,6 +1454,7 @@ const zh: LANG_MESSAGE = {
   ...dnsPageZh,
   ...clientAppPageZh,
   ...subscriptionDnsZh,
+  ...factoryResetZh,
 }
 
 export default zh
