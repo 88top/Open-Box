@@ -6,12 +6,12 @@
   <div class="inline-flex">
     <button
       type="button"
-      class="btn btn-ghost btn-circle btn-xs text-error"
+      class="btn btn-ghost btn-circle btn-sm text-error"
       v-tip="$t('factoryResetTitle')"
       :aria-label="$t('factoryResetTitle')"
       @click="open = true"
     >
-      <ExclamationTriangleIcon class="h-5 w-5" />
+      <ExclamationTriangleIcon class="h-4 w-4" />
     </button>
 
     <DialogWrapper
