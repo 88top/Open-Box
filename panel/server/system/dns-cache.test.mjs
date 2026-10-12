@@ -37,7 +37,7 @@ const fakeSignal = (found) => {
 const startApp = async ({ ctx, fetchImpl, signal = fakeSignal(0).signal }) => {
   const app = express()
   registerDnsCacheRoutes(app, { ctx, store: { getClashSecret: () => 's3cret' }, fetchImpl, signal })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   return { baseUrl: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }

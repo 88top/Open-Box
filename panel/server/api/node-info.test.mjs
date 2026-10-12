@@ -58,7 +58,7 @@ const setup = async ({ exec, resolve4 = async () => ['1.1.1.1'], resolve6 = asyn
     routeFor: routeFor || (async () => ({ outbound: 'direct', chain: ['direct'] })),
     outboundsFor: async ({ upstream }) => ({ via: upstream, outbounds: [{ type: 'vless', tag: upstream }], dnsServers: [] }),
   })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}/api/openbox/node-info`
   const call = async (path, method = 'GET', body) => {

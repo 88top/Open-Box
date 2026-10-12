@@ -41,7 +41,7 @@ const startApp = async ({ ctx, store, fetchImpl, resolveTarget } = {}) => {
   const realStore = store || memStore()
   const app = express()
   registerPenetrationRoutes(app, { store: realStore, ctx, paths, fetchImpl, resolveTarget: resolveTarget || (async () => ({ addresses: ['203.0.113.10'] })) })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve, reject) => {
     server.once('listening', resolve)
     server.once('error', reject)

@@ -366,7 +366,7 @@ test('接口:统一的一个码 → 拉加密配置 → 规则集 → 导出文�
   app.use(express.json())
   registerPublicClientConfigRoutes(app, { store, ctx, paths, fetchImpl, geoDir })
   registerClientConfigRoutes(app, { store, ctx, paths, fetchImpl, geoDir })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
   const codeNow = async () => (await fetch(`${base}/api/openbox/client-config`)).json()
@@ -476,7 +476,7 @@ test('客户端配置:view 带面板背景的元数据;导出文件带图片字�
   const app = express()
   registerPublicClientConfigRoutes(app, { store, ctx, paths, fetchImpl, geoDir })
   registerClientConfigRoutes(app, { store, ctx, paths, fetchImpl, geoDir })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
   try {

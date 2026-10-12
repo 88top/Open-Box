@@ -31,7 +31,7 @@ const startApp = async (ctx, fetchImpl) => {
   clearRulesetEntriesCache()
   const app = express()
   registerRulesetRoutes(app, { ctx, paths, fetchImpl })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve, reject) => {
     server.once('listening', resolve)
     server.once('error', reject)
@@ -132,7 +132,7 @@ test('GET /policies/entries:站点集的规则集展开 + 手写条件,分档计
   const app = express()
   clearRulesetEntriesCache()
   registerRulesetRoutes(app, { ctx, paths, store })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
   try {
@@ -170,7 +170,7 @@ test('GET /policies/entries:规则集链接展开本地编好的那几份 .srs,�
   const app = express()
   clearRulesetEntriesCache()
   registerRulesetRoutes(app, { ctx, paths, store, fetchImpl: async () => { throw new Error('本地有就不该拉网络') } })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}`
   try {
@@ -187,7 +187,7 @@ test('GET /policies/entries:规则集链接展开本地编好的那几份 .srs,�
   const app2 = express()
   clearRulesetEntriesCache()
   registerRulesetRoutes(app2, { ctx: ctx2, paths, store, fetchImpl: async () => ({ ok: true, status: 200, arrayBuffer: async () => srs }) })
-  const server2 = app2.listen(0)
+  const server2 = app2.listen(0, '127.0.0.1')
   await new Promise((resolve) => server2.once('listening', resolve))
   const base2 = `http://127.0.0.1:${server2.address().port}`
   try {
@@ -239,7 +239,7 @@ test('GET /rulesets/preview:按网址拉回来解析,形状和 /rulesets/entries
   }
   const app = express()
   registerRulesetRoutes(app, { ctx, paths, fetchImpl })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const base = `http://127.0.0.1:${server.address().port}/api/openbox/rulesets/preview`
   try {

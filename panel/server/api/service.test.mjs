@@ -35,7 +35,7 @@ const startApp = async (ctx, storeOverride, opts = {}) => {
   const store = storeOverride || memStore()
   const app = express()
   registerServiceRoutes(app, { store, ctx, paths, ...opts })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve, reject) => {
     server.once('listening', resolve)
     server.once('error', reject)

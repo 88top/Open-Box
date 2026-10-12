@@ -19,7 +19,7 @@ const NO_ROUTE = async () => ({ error: 'no rulesets' })
 const startApp = async ({ ctx, store = memStore(), fetchImpl = FETCH_FAIL, systemDnsReader = async () => ['192.168.1.1'], routeFor = NO_ROUTE, outboundsFor = async () => { throw new Error('not used') }, platform = 'darwin' } = {}) => {
   const app = express()
   registerDnsUpstreamTestRoutes(app, { ctx, paths, store, fetchImpl, systemDnsReader, routeFor, outboundsFor, platform })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   return { ctx, store, baseUrl: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }
@@ -288,7 +288,7 @@ test('POST /dns/region-detect:按出口公网 IP 判一次路由器在哪,判不
   const ctx = createMockContext({ files: withKernel() })
   const app = express()
   registerDnsUpstreamTestRoutes(app, { ctx, paths, store: memStore(), detectRegion: async (deps) => { calls.push(deps.timeoutMs); return answers.shift() } })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const url = `http://127.0.0.1:${server.address().port}/api/openbox/dns/region-detect`
   try {
@@ -308,7 +308,7 @@ test('GET /dns/region-detect 给出启动时那次后台判定还在不在等;PO
   const answers = [{ region: 'intl', ip: '131.117.188.66' }, { region: 'cn', ip: '39.129.157.217' }]
   const app = express()
   registerDnsUpstreamTestRoutes(app, { ctx, paths, store, detectRegion: async () => answers.shift() })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const url = `http://127.0.0.1:${server.address().port}/api/openbox/dns/region-detect`
   try {

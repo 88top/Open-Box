@@ -47,7 +47,7 @@ const memStore = () => {
 const startApp = async ({ ctx = createMockContext(), lookup = fakeLookup, prober = fakeProber(), store = null, history = null, fetchImpl = async () => { throw new Error('no net') }, kernelStale = null } = {}) => {
   const app = express()
   registerNodeLatencyRoutes(app, { ctx, paths, store, fetchImpl, lookup, prober, history, kernelStale, now: () => Date.parse('2026-09-22T08:00:00Z') })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   return { ctx, prober, baseUrl: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }
@@ -219,7 +219,7 @@ const kernelNow = (proxies) => async (url) => {
 const startChainApp = async ({ ctx = createMockContext(), store = chainStore(), fetchImpl = kernelNow({ '香港-自动': { now: 'HK-02', all: ['HK-01', 'HK-02'] } }), prober = fakeProber() } = {}) => {
   const app = express()
   registerNodeLatencyRoutes(app, { ctx, paths, store, fetchImpl, lookup: fakeLookup, prober })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   return { ctx, store, prober, baseUrl: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }

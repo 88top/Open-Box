@@ -34,7 +34,7 @@ test('checkServerPort:保留端口 / 别的服务器 / 路由器在监听 / 自�
 test('GET /servers/port-check', async () => {
   const app = express()
   registerServerRoutes(app, { store: { getProfile: () => ({ servers: [] }) }, ctx: createMockContext({ files: { '/proc/net/tcp': TCP } }) })
-  const srv = app.listen(0)
+  const srv = app.listen(0, '127.0.0.1')
   await new Promise((r) => srv.once('listening', r))
   try {
     const base = `http://127.0.0.1:${srv.address().port}`

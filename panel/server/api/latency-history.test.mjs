@@ -11,7 +11,7 @@ const memStore = () => {
 const startApp = async (history, scheduler) => {
   const app = express()
   registerLatencyHistoryRoutes(app, { history, scheduler })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   return { baseUrl: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }

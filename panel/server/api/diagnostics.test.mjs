@@ -136,7 +136,7 @@ test('诊断包 · 节点专用解析器(#136):机场 DoH 的主机名和私有�
 test('GET /api/openbox/diagnostics 返回诊断包;读不到配置 / 命令失败也不炸', async () => {
   const app = express()
   registerDiagnosticsRoutes(app, { store, ctx: mkCtx(), paths })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/diagnostics`)

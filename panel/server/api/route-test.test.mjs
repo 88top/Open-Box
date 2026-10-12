@@ -65,7 +65,7 @@ test('POST /route-test:内核解析 + 真实访问 + 在连接表里找到这条
   const probe = async (host, opts) => { probeCalls.push({ host, ...opts }); return { ok: true, status: opts.port === 443 ? 200 : 301, ms: 7 } }
   const app = express()
   registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: 'www.baidu.com' }) })
@@ -104,7 +104,7 @@ test('POST /route-test:访问失败也报出站链路——请求挂着的时候
     const probe = () => new Promise((resolve) => setTimeout(() => { probeDone = true; resolve({ ok: false, error: 'connection closed', ms: 5041 }) }, 250))
     const app = express()
     registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe })
-    const server = app.listen(0)
+    const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
       const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: '8.8.8.8' }) })
@@ -159,7 +159,7 @@ test('DNS 规则过期:内核里的选择和配置里定死的判断对不上就
     }
     const app = express()
     registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: false, error: 'timeout', ms: 1 }) })
-    const server = app.listen(0)
+    const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
       const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target }) })
@@ -211,7 +211,7 @@ test('fake-ip:代理侧解析回 198.19.x.x 就标出是 detour 此刻落到的�
     }
     const app = express()
     registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 1 }) })
-    const server = app.listen(0)
+    const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
       const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target }) })
@@ -252,7 +252,7 @@ test('POST /route-test:每次查询都先清内核 DNS 缓存,而且清在解析
     }
     const app = express()
     registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 3 }) })
-    const server = app.listen(0)
+    const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
       const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
@@ -293,7 +293,7 @@ test('档案开了 IPv6:再查一次 AAAA,单独放 answers6;没开就没有这�
     asked.length = 0
     const app = express()
     registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6 }) }, ctx, paths, fetchImpl, probe })
-    const server = app.listen(0)
+    const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
       const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: 'www.baidu.com' }) })
@@ -352,7 +352,7 @@ test('S4:指定终端来源时,响应明确标出 DNS 判定是按终端预测�
   const probe = async (host, opts) => { probes.push({ host, ...opts }); return { ok: true, status: 200, ms: 1 } }
   const app = express()
   registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6: false }) }, ctx, paths, fetchImpl, probe })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: 'example.com', sourceIp: '192.168.3.9' }) })
@@ -407,7 +407,7 @@ test('decideDnsServer:内核自己的 fakeip 规则先命中时记成 fakeIpRule
   }
   const app = express()
   registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 1 }) })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: 'www.google.com' }) })
@@ -471,7 +471,7 @@ test('内核诊断:探测拿到 403 + cf-mitigated: challenge 时 exit.challenge
   const probe = async () => ({ ok: true, status: 403, ms: 9, headers: { server: 'cloudflare', 'cf-mitigated': 'challenge' } })
   const app = express()
   registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify({ target: 'chatgpt.com' }) })

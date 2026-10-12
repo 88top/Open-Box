@@ -13,7 +13,7 @@ after(() => {
 const startApp = async (ctx, platform) => {
   const app = express()
   registerTimezoneRoutes(app, { ctx, platform })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}/api/openbox/system/timezone`
   return { base, close: () => new Promise((resolve) => server.close(resolve)) }

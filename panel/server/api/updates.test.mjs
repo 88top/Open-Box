@@ -13,7 +13,7 @@ const paths = createPaths('/opt/open-box')
 const startApp = async (ctx, store, fetchImpl) => {
   const app = express()
   registerUpdateRoutes(app, { store, ctx, paths, fetchImpl })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   return { base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }

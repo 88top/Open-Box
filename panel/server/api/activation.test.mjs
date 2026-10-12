@@ -20,7 +20,7 @@ const setup = async ({ meta = { version: 'v0.1.263' }, kernel = 'sing-box versio
   const app = express()
   app.use(express.json())
   registerActivationRoutes(app, { store, ctx, paths })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const base = `http://127.0.0.1:${server.address().port}/api/openbox/activation`
   const call = async (method, body) => {

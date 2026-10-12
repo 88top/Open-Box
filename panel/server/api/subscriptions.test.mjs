@@ -33,7 +33,7 @@ const startApp = async (fetchImpl, lookup = fakePublicLookup, extra = {}) => {
   const store = memStore()
   const app = express()
   registerSubscriptionRoutes(app, { store, fetchImpl, lookup, ...extra })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve, reject) => {
     server.once('listening', resolve)
     server.once('error', reject)

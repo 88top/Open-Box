@@ -50,7 +50,7 @@ test('统计接口读取未落盘增量，反复查询不写盘；flush 后总�
 const startApp = async (collector, now, extra = {}) => {
   const app = express()
   registerTrafficRoutes(app, { collector, now, ...extra })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   return { base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((r) => server.close(r)) }
 }

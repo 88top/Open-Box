@@ -13,7 +13,7 @@ const setup = async () => {
   const app = express()
   registerPublicSubscriptionShareRoutes(app, { store, fetchImpl: async () => ({ ok: true, text: async () => '' }) })
   registerSubscriptionShareRoutes(app, { store })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   return { store, base: `http://127.0.0.1:${server.address().port}`, close: () => new Promise((resolve) => server.close(resolve)) }
 }

@@ -19,7 +19,7 @@ const startApp = async (storeOverride) => {
   const store = storeOverride || memStore()
   const app = express()
   registerProfileRoutes(app, { store })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve, reject) => {
     server.once('listening', resolve)
     server.once('error', reject)
@@ -619,7 +619,7 @@ test('PUT /api/openbox/profile:存了地区分流才触发 onShareRegionsSaved',
   let calls = 0
   const app = express()
   registerProfileRoutes(app, { store, onShareRegionsSaved: () => { calls += 1 } })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   const baseUrl = `http://127.0.0.1:${server.address().port}`
   try {

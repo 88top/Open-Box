@@ -200,7 +200,7 @@ test('接口:GET 测默认四个;POST 按前端给的站点表测(只传一个�
   const kv = new Map()
   const store = { getRaw: (k) => kv.get(k) ?? null, setRaw: (k, v) => kv.set(k, v), delRaw: (k) => kv.delete(k) }
   registerSiteLatencyRoutes(app, { store, fetchImpl, probe })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const base = `http://127.0.0.1:${server.address().port}/api/openbox/site-latency`
@@ -253,7 +253,7 @@ test('站点延时历史:每测一次记一笔、按 SITE_MAX_SAMPLES 截断、�
   }
   const app = express()
   registerSiteLatencyRoutes(app, { store, fetchImpl: async () => new Response('{}'), probe })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const base = `http://127.0.0.1:${server.address().port}/api/openbox/site-latency`
   const sites = [{ id: 'baidu', url: 'https://www.baidu.com/favicon.ico' }, { id: 'openai', url: 'https://api.openai.com/v1/models' }]
@@ -284,7 +284,7 @@ test('站点延时:历史存不下也不能影响测速结果(store 坏了照样
     fetchImpl: async () => new Response('{}'),
     probe: async () => ({ ok: true, ms: 42, openMs: 99, status: 200, localPort: 1, close: () => {} }),
   })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/site-latency`, {
     method: 'POST', headers: { 'content-type': 'application/json' },

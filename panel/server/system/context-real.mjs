@@ -17,12 +17,13 @@ const writeAtomic = async (path, data, encoding) => {
 export const createRealContext = () => ({
   // timeoutMs 可选:默认 30 秒适合部署/服务控制这类命令,但节点测速需要更短的上限,
   // 否则一批连不通的节点会把整轮拖成几分钟。
-  async exec(cmd, args = [], { timeoutMs = 30_000, env } = {}) {
+  // maxBuffer 可选:默认 1 MB(execFile 的默认值),取大网页(YouTube 频道页 1.3 MB)时放宽,超了按失败算
+  async exec(cmd, args = [], { timeoutMs = 30_000, env, maxBuffer } = {}) {
     // sing-box 的工具子命令(rule-set compile / decompile / match、check、generate)都是短命进程,Go 默认 GOGC=100
     // 会让堆长到活数据的两倍才回收:编译 9 万多条的过滤名单峰值 140 MB。压到 25 峰值约 110 MB、慢一成,在 1 GB
     // 的路由器上值得。常驻的 sing-box run 由 init 脚本起,不经这里,不受影响
     const tool = /(^|\/)sing-box$/.test(String(cmd)) && args[0] !== 'run'
-    const options = { timeout: timeoutMs }
+    const options = { timeout: timeoutMs, ...(maxBuffer ? { maxBuffer } : {}) }
     // 子进程不带面板给自己设的 TZ(system/timezone.mjs 的 childEnv),照旧按系统的时区设置
     options.env = childEnv({ ...(tool ? { GOGC: '25' } : {}), ...(env || {}) })
     return new Promise((resolve) => {

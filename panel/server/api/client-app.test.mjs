@@ -24,7 +24,7 @@ const setup = async ({ detectCountry, ctx = null, paths = null, publicCtx = null
   const app = express()
   registerPublicClientRoutes(app, { store, geoDir, ctx: publicCtx, paths: publicPaths })
   registerClientAppRoutes(app, { store, ctx, paths, ...(detectCountry ? { detectCountry } : {}) })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((resolve) => server.once('listening', resolve))
   return {
     store, map,

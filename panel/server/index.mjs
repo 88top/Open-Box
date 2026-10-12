@@ -16,6 +16,7 @@ import { registerDeployRoutes } from './api/deploy.mjs'
 import { registerGroupRoutes } from './api/groups.mjs'
 import { registerNodeLatencyRoutes } from './api/node-latency.mjs'
 import { registerNodeInfoRoutes } from './api/node-info.mjs'
+import { registerTutorialVideoRoutes } from './api/tutorial-videos.mjs'
 import { registerSiteLatencyRoutes } from './api/site-latency.mjs'
 import { registerDnsUpstreamTestRoutes } from './api/dns-upstream-test.mjs'
 import { registerPenetrationRoutes } from './api/penetration.mjs'
@@ -1333,6 +1334,8 @@ const probeLimiter = createProbeLimiter({ limit: 4 })
 registerNodeLatencyRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch, prober: nodeProber, history: latencyHistory, kernelStale, limiter: probeLimiter })
 // 代理页节点悬停浮层的「节点信息」:节点本身的地址 / 协议,出口 IP 的属地、ASN、IP 类型、风控值、原生 / 广播(api/node-info.mjs)
 registerNodeInfoRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch })
+// 后端设置「使用教程」:安格视界频道里标题带 Open-Box / openbox 的视频(api/tutorial-videos.mjs)
+registerTutorialVideoRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch })
 // 概览里的站点延时小卡片:面板经内核的回环入站(panel-in)真去访问一次,量连接建好之后的一次往返
 registerSiteLatencyRoutes(app, { store, fetchImpl: globalThis.fetch })
 registerDnsUpstreamTestRoutes(app, { ctx: obCtx, paths: obPaths, store, fetchImpl: globalThis.fetch })

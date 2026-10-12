@@ -12,19 +12,16 @@
 import dns from 'node:dns/promises'
 import express from 'express'
 import net from 'node:net'
-import { directUpstream, dnsStrategy } from '../engine/dns.mjs'
-import { dnsServerEntry } from '../engine/dns-upstream.mjs'
 import { emitEndpoint } from '../engine/emit-endpoint.mjs'
 import { emitOutbound } from '../engine/emit-outbound.mjs'
 import { chainNodes } from '../engine/chain-proxy.mjs'
 import { FALLBACK_REGION_DICT } from '../engine/countries.mjs'
 import { matchRegion } from '../engine/rename.mjs'
-import { builtinTags } from '../engine/user-groups.mjs'
-import { PROBE_MARK } from '../system/node-probe.mjs'
 import { readSystemDns } from '../system/resolv.mjs'
 import { ipCountry } from '../system/router-region.mjs'
 import { routeForUpstream } from './dns-upstream-route.mjs'
 import { upstreamOutbounds } from './node-latency.mjs'
+import { createRouteFetcher } from './route-fetch.mjs'
 import { activeNodes } from './subscriptions.mjs'
 
 // 两个子域名各只有一种地址:经节点访问 ipv4 的拿到 IPv4 出口,ipv6 的通了就是节点有 IPv6 出口。直接用 ping0.cc 的话
@@ -35,12 +32,8 @@ export const rdapUrl = (ip) => `https://rdap.arin.net/registry/ip/${encodeURICom
 // 出口结果按节点缓存 6 小时;手动刷新同一个节点至少隔 15 秒(ping0.cc 的限流按出口 IP 算)
 export const EXIT_CACHE_MS = 6 * 60 * 60 * 1000
 export const EXIT_REFRESH_MIN_MS = 15 * 1000
-const FETCH_TIMEOUT_MS = 15000
 const RESOLVE_TIMEOUT_MS = 4000
-const BOOTSTRAP = 'bootstrap'
 
-const stripAnsi = (s) => String(s || '').replace(/\x1b\[[0-9;]*m/g, '')
-const probeRoute = (platform, route) => (platform === 'linux' ? { ...route, default_mark: PROBE_MARK } : route)
 const withTimeout = (promise, ms) => Promise.race([promise, new Promise((_, reject) => setTimeout(() => reject(new Error('timeout')), ms))])
 
 // ping0.cc/geo 回四行:IP、属地(带运营商)、ASN、ASN 所有者
@@ -110,7 +103,6 @@ export const registerNodeInfoRoutes = (app, {
   const countryCache = new Map() // ip → 'HK'
   // 同一时刻只查一个节点的出口:几个临时进程一起跑路由器吃不消,也免得撞 ping0.cc 的限流
   let exitChain = Promise.resolve()
-  let seq = 0
 
   // 按随包 geoip 一份份解开来查,路由器上一份就要好几百毫秒:先查节点名里认得出的地区(「美国-01」先查 us),一般一次就中
   const regionHint = (node) => {
@@ -124,51 +116,14 @@ export const registerNodeInfoRoutes = (app, {
     return cc
   }
 
-  // 临时配置:只放要用的出站;解析器是直连上游(和 DNS 上游测试的 bootstrap 一样),地址族策略照内核
-  const fetchVia = async ({ outbounds = [], endpoints = [], dnsServers = [], via, url, profile, systemDns }) => {
-    const configPath = `${paths.etc}/probe/node-info-${process.pid}-${++seq}.json`
-    const config = {
-      log: { level: 'error', timestamp: false },
-      dns: { servers: [dnsServerEntry(directUpstream(profile, { systemDns }), BOOTSTRAP), ...dnsServers], final: BOOTSTRAP, strategy: dnsStrategy(profile) },
-      outbounds: [{ type: 'direct', tag: 'direct' }, ...outbounds],
-      ...(endpoints.length ? { endpoints } : {}),
-      route: probeRoute(platform, { default_domain_resolver: BOOTSTRAP, final: 'direct' }),
-    }
-    try {
-      await ctx.mkdirp(`${paths.etc}/probe`)
-      await ctx.writeFile(configPath, JSON.stringify(config))
-      const r = await ctx.exec(paths.singbox, ['tools', 'fetch', '-c', configPath, '-o', via, url], { timeoutMs: FETCH_TIMEOUT_MS })
-      if (r.code === 0) return { ok: true, body: String(r.stdout || '') }
-      const reason = stripAnsi(r.stderr).split('\n').filter(Boolean).pop() || '超时'
-      return { ok: false, error: reason.replace(/^FATAL\[\d+\]\s*/, '').replace(/^Get "[^"]*":\s*/, '').slice(0, 160) }
-    } finally {
-      // 临时配置里有节点凭据:用完就删
-      await ctx.remove(configPath).catch(() => {})
-    }
-  }
+  // 经指定出站 / 按目标分流取网址:和使用教程共用一份(api/route-fetch.mjs)
+  const { fetchVia, fetchByRoute } = createRouteFetcher({ ctx, paths, store, fetchImpl, platform, systemDnsReader, routeFor, outboundsFor, name: 'node-info' })
 
   // 这个节点自己(链式节点连同此刻经过的上游);WireGuard 节点在内核里是 endpoint
   const nodeTargets = async (node) => {
     if (node.type === 'wireguard') return { via: node.tag, outbounds: [], endpoints: [emitEndpoint(node)], dnsServers: [] }
     const set = await outboundsFor({ store, fetchImpl, upstream: node.tag })
     return { via: set.via, outbounds: set.outbounds, endpoints: [], dnsServers: set.dnsServers }
-  }
-
-  // 面板替用户访问的地址:按目标分流判线路,出口是直连 / 判不出就从路由器直连取
-  const fetchByRoute = async (url, base) => {
-    const host = new URL(url).hostname
-    const route = await routeFor({ store, ctx, paths, fetchImpl }, { server: host, port: 443, protocol: 'tcp' })
-    if (route.reject) return { ok: false, error: `目标分流拒绝访问 ${host}` }
-    const builtin = builtinTags(store.getGroups ? store.getGroups() : [])
-    const last = route.chain && route.chain.length ? route.chain[route.chain.length - 1] : ''
-    if (route.error || !route.outbound || route.outbound === builtin.direct || last === builtin.direct) return fetchVia({ ...base, via: 'direct', url })
-    let set
-    try {
-      set = await outboundsFor({ store, fetchImpl, upstream: route.outbound })
-    } catch {
-      return fetchVia({ ...base, via: 'direct', url })
-    }
-    return fetchVia({ ...base, outbounds: set.outbounds, dnsServers: set.dnsServers, via: set.via, url })
   }
 
   router.get('/node-info/:tag', async (req, res) => {

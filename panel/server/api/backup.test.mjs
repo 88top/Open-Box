@@ -135,7 +135,7 @@ test('HTTP:GET /backup 按 subscriptions 参数决定带不带订阅;POST /backu
   seed(store)
   const app = express()
   registerBackupRoutes(app, { store, readVersion: async () => 'v0.1.108' })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   const base = `http://127.0.0.1:${server.address().port}`
   try {
@@ -150,7 +150,7 @@ test('HTTP:GET /backup 按 subscriptions 参数决定带不带订阅;POST /backu
     const dst = memStore()
     const app2 = express()
     registerBackupRoutes(app2, { store: dst })
-    const server2 = app2.listen(0)
+    const server2 = app2.listen(0, '127.0.0.1')
     await new Promise((r) => server2.once('listening', r))
     const base2 = `http://127.0.0.1:${server2.address().port}`
     try {
@@ -341,7 +341,7 @@ test('接口:chainProxies=0 不带链式代理;老前端不带这个参数时跟
   store.setProfile({ chainProxies: [CHAIN('英国-住宅')] })
   const app = express()
   registerBackupRoutes(app, { store })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const get = (q) => fetch(`http://127.0.0.1:${server.address().port}/api/openbox/backup${q}`).then((r) => r.json())
@@ -393,7 +393,7 @@ test('HTTP:备份超过 10 MB 也能导入——排在前面的订阅路由(10 M
   registerBackupBodyParser(app)
   registerSubscriptionRoutes(app, { store: dst })
   registerBackupRoutes(app, { store: dst })
-  const server = app.listen(0)
+  const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
     const res = await fetch(`http://127.0.0.1:${server.address().port}/api/openbox/backup/import`, { method: 'POST', headers: { 'content-type': 'application/json' }, body })
