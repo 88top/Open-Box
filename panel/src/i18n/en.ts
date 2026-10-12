@@ -898,6 +898,12 @@ const en = {
   tunTcpMss: 'TCP MSS clamp',
   tunTcpMssHint: 'Clamp MSS on the SYN of TCP connections the kernel itself makes; 0 = off; otherwise {min} - {max}.',
   tunTcpMssInvalid: 'MSS must be 0 (off) or an integer between {min} and {max}',
+  tunStackLabel: 'Stack',
+  tunStackNote: 'mixed (default): TCP uses the system kernel stack, the rest runs in user space, highest throughput. gvisor: everything in the user-space stack, bypassing the kernel DNAT path - choose it on devices with hardware flow offloading (such as the MT6000) when large files get corrupted on wired direct connections. system: everything on the system stack.',
+  tunMtuLabel: 'MTU',
+  tunMtuNote: '0 = kernel default (9000); range 1280-65535.',
+  tunMssLabel: 'Outbound TCP MSS',
+  tunMssNote: 'Clamps MSS on the SYN of TCP connections the kernel itself makes (both proxied and direct); 0 = no clamping. Try about 1400 when the upstream link has a small MTU (PPPoE, tunnels) and large packets stall; forwarded LAN traffic is handled by the system firewall MSS clamping.',
   tunSaved: 'TUN options saved; restart the kernel to apply.',
   ipv6ProxyNodeNote: 'IPv6 targets go to the selected node like IPv4; they fail if the node lacks IPv6. Direct IPv6 is unaffected.',
   // Outbound nodes tab · chain proxy card

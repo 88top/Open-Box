@@ -876,6 +876,12 @@ const zh: LANG_MESSAGE = {
   tunTcpMss: 'TCP MSS 钳制',
   tunTcpMssHint: '内核自己发出的 TCP 连接在 SYN 上钳制 MSS;0 = 不钳制;否则填 {min} - {max}。',
   tunTcpMssInvalid: 'MSS 要填 0(不钳制)或 {min} - {max} 的整数',
+  tunStackLabel: '协议栈',
+  tunStackNote: 'mixed(默认):TCP 走系统内核栈、其余走用户态,吞吐最高。gvisor:全部走用户态栈,绕开内核的 DNAT 路径——MT6000 这类开着硬件流量卸载的机器,有线口直连大文件损坏时选它。system:全部走系统栈。',
+  tunMtuLabel: 'MTU',
+  tunMtuNote: '0 = 内核默认(9000);范围 1280–65535。',
+  tunMssLabel: '出站 TCP MSS',
+  tunMssNote: '内核自己发出的 TCP 连接(走代理和直连的都算)在 SYN 上钳制 MSS;0 = 不钳制。上游链路 MTU 偏小(PPPoE、隧道)、大包卡住时可试 1400 左右;局域网转发的流量由系统防火墙的 MSS 钳制管。',
   tunSaved: 'TUN 参数已保存,重启内核后生效。',
   ipv6ProxyNodeNote: 'IPv6 目标和 IPv4 一样交给选中的节点;节点不支持 IPv6 时会失败。直连的 IPv6 照常。',
   // 出站节点页签 · 链式代理卡片

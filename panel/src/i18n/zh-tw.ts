@@ -895,6 +895,12 @@ const zhTW: LANG_MESSAGE = {
   tunTcpMss: 'TCP MSS 鉗制',
   tunTcpMssHint: '核心自己發出的 TCP 連線在 SYN 上鉗制 MSS;0 = 不鉗制;否則填 {min} - {max}。',
   tunTcpMssInvalid: 'MSS 要填 0(不鉗制)或 {min} - {max} 的整數',
+  tunStackLabel: '協議棧',
+  tunStackNote: 'mixed(預設):TCP 走系統核心棧、其餘走使用者態,吞吐最高。gvisor:全部走使用者態棧,繞開核心的 DNAT 路徑——MT6000 這類開著硬體流量卸載的機器,有線口直連大檔案損壞時選它。system:全部走系統棧。',
+  tunMtuLabel: 'MTU',
+  tunMtuNote: '0 = 核心預設(9000);範圍 1280–65535。',
+  tunMssLabel: '出站 TCP MSS',
+  tunMssNote: '核心自己發出的 TCP 連線(走代理和直連的都算)在 SYN 上鉗制 MSS;0 = 不鉗制。上游鏈路 MTU 偏小(PPPoE、隧道)、大包卡住時可試 1400 左右;區域網路轉發的流量由系統防火牆的 MSS 鉗制管。',
   tunSaved: 'TUN 參數已儲存,重啟核心後生效。',
   ipv6ProxyNodeNote: 'IPv6 目標和 IPv4 一樣交給選中的節點;節點不支援 IPv6 時會失敗。直連的 IPv6 照常。',
   // 出站節點頁籤 · 鏈式代理卡片
