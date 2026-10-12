@@ -1303,7 +1303,7 @@ const zhTW: LANG_MESSAGE = {
   subShareDeleteConfirm: '確定刪除「{name}」？',
   subShareLoadFailed: '訂閱分享載入失敗:{message}',
   serverAdd: '新增伺服器',
-  serverEmpty: '還沒有伺服器,點右上角 + 建立一個。',
+  serverEmpty: '還沒有伺服器。',
   serverAddTitle: '新增伺服器',
   serverEditTitle: '編輯伺服器',
   serverNameLabel: '備註',
