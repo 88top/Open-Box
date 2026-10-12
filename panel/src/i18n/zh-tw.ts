@@ -2,6 +2,7 @@ import type { LANG_MESSAGE } from './en'
 import { dnsFilterTw } from './dns-filter'
 import { dnsPageZhTw } from './dns-page'
 import { kernelSettingsZhTw } from './kernel-settings'
+import { clientAppPageZhTw } from './client-app-page-tw'
 import { subscriptionDnsZhTw } from './subscription-dns'
 
 const zhTW: LANG_MESSAGE = {
@@ -1437,6 +1438,7 @@ const zhTW: LANG_MESSAGE = {
   probeOverloaded: '測速跟不上:每秒要測約 {demand} 個,核心每秒測完約 {done} 個,檢測會變慢;可減少組裡的節點或加大檢測間隔。',
   listSeparator: '、',
   ...dnsPageZhTw,
+  ...clientAppPageZhTw,
   ...subscriptionDnsZhTw,
 }
 
