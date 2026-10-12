@@ -88,6 +88,79 @@ html.apple-mobile-ui {
   border-radius: var(--app-radius-field, 0.5rem) !important;
 }
 
+/* 开关改成「圆角滑块」(上游 v0.1.315 起整站统一):关着是浅灰底,开着是主题色底,白色滑块左右滑动。
+   daisyUI 默认的开关是「深色底 + 同色滑块」,这里整个盖掉;圆角仍由上面那条 --app-radius-field 管。
+   缓动曲线变量没定义时退回常规曲线,不会让整条 transition 失效 */
+#app-content .toggle {
+  --sw-h: 1.375rem;
+  --sw-w: calc(var(--sw-h) * 1.82);
+  --sw-thumb-h: calc(var(--sw-h) - 4px);
+  --sw-thumb-w: calc(var(--sw-thumb-h) * 1.35);
+  --sw-thumb-x: 0px;
+  width: var(--sw-w);
+  height: var(--sw-h);
+  background-color: var(--color-base-content);
+  background-color: color-mix(in oklab, var(--color-base-content) 14%, var(--color-base-100));
+  background-image: none;
+  border: none;
+  box-shadow: none;
+  color: var(--color-primary);
+  flex-shrink: 0;
+  padding: 0;
+  display: inline-block;
+  position: relative;
+  transition: background-color 0.2s var(--ease-out, cubic-bezier(0.23, 1, 0.32, 1));
+}
+
+#app-content .toggle:before {
+  content: '';
+  width: var(--sw-thumb-w);
+  height: var(--sw-thumb-h);
+  aspect-ratio: auto;
+  border-radius: max(calc(var(--app-radius-field, 0.5rem) - 2px), 2px);
+  translate: var(--sw-thumb-x) 0;
+  transition:
+    translate 0.25s var(--ease-drawer, cubic-bezier(0.32, 0.72, 0, 1)),
+    width 0.25s var(--ease-drawer, cubic-bezier(0.32, 0.72, 0, 1));
+  top: 2px;
+  background-color: #fff;
+  background-image: none;
+  position: absolute;
+  inset-inline-start: 2px;
+  box-shadow:
+    0 2px 4px rgb(0 0 0 / 0.16),
+    0 0 0 0.5px rgb(0 0 0 / 0.06);
+}
+
+#app-content .toggle:checked,
+#app-content .toggle[aria-checked='true'] {
+  background-color: var(--color-primary);
+  --sw-thumb-x: calc(var(--sw-w) - var(--sw-thumb-w) - 4px);
+}
+
+#app-content .toggle:checked:before,
+#app-content .toggle[aria-checked='true']:before {
+  background-color: #fff;
+}
+
+#app-content .toggle:not(:disabled):active {
+  --sw-thumb-w: calc(var(--sw-thumb-h) * 1.35 + 3px);
+}
+
+#app-content .toggle:disabled {
+  opacity: 0.4;
+}
+
+#app-content .toggle:disabled:before {
+  background-color: #fff;
+  border: none;
+}
+
+#app-content .toggle:focus-visible {
+  outline: 2px solid var(--color-primary);
+  outline-offset: 2px;
+}
+
 #app-content .btn.btn-circle {
   border-radius: var(--app-radius-field, 0.5rem) !important;
 }
