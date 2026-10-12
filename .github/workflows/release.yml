@@ -187,11 +187,13 @@ jobs:
       - name: Run server test suite
         working-directory: panel
         continue-on-error: true
+        timeout-minutes: 10
         run: corepack pnpm run test:server
 
       - name: Verify generated config against pinned sing-box
         working-directory: panel
         continue-on-error: true
+        timeout-minutes: 5
         env:
           CI: 'true'
         run: corepack pnpm run check:config

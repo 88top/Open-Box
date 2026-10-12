@@ -90,6 +90,26 @@ jobs:
           fi
           for f in scripts/install.sh scripts/update.sh scripts/uninstall.sh; do sh -n "$f"; done
 
+          # 4b. 上游 terminal-test.test.mjs 在 app.listen 之后立刻读 address().port,
+          #     address() 此时还是 null,测试抛 TypeError,server 没关,node --test 进程退不出来。
+          #     补一句等 listening;上游自己改好后会自动跳过。每次同步覆盖 panel/ 后都要重做一遍。
+          python3 - <<'PY'
+          import pathlib
+          p = pathlib.Path('panel/server/api/terminal-test.test.mjs')
+          if p.exists():
+              s = p.read_bytes().decode('utf-8')
+              old = "  const server = app.listen(0, '127.0.0.1')\n  const base ="
+              fix = "  if (!server.listening) await new Promise((resolve, reject) => { server.once('listening', resolve); server.once('error', reject) })\n"
+              if 'listening' in s:
+                  print('terminal-test.test.mjs 已经会等 listening,不处理')
+              elif old in s:
+                  s = s.replace(old, "  const server = app.listen(0, '127.0.0.1')\n" + fix + "  const base =")
+                  p.write_bytes(s.encode('utf-8'))
+                  print('已给 terminal-test.test.mjs 补上等 listening')
+              else:
+                  print('::warning::terminal-test.test.mjs 的 listen 写法变了,没能自动修补,请检查')
+          PY
+
           # 5. 直接提交到目标分支
           echo "$tag" > .upstream-synced
           rm -rf app app.tar.gz components.json
