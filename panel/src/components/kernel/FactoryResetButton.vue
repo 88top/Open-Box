@@ -1,5 +1,6 @@
 <template>
-  <!-- 恢复出厂设置:标题行右上角的红色警示图标,点开是确认弹窗。
+  <!-- 恢复出厂设置:标题行右上角的红色警示图标,点开是确认弹窗(对齐 v0.1.317:标题 + 两段说明 +
+       「取消 / 确定(7)」,确定要倒数 7 秒才能点)。
        后端 POST /api/openbox/factory-reset:整张表清空(订阅、节点、分流、面板设置、背景图、
        面板密码、登录会话)、统计清零、按随包默认重新播种、内核停掉。不可恢复。 -->
   <div class="inline-flex">
@@ -15,20 +16,26 @@
 
     <DialogWrapper
       v-model="open"
-      :title="$t('factoryResetTitle')"
-      box-class="w-full max-w-md"
+      box-class="w-full max-w-lg"
+      content-class="pb-2"
     >
-      <div class="flex flex-col gap-3 text-sm">
-        <p>{{ $t('factoryResetIntro') }}</p>
-        <ul class="text-base-content/70 list-disc pl-5 text-xs leading-relaxed">
-          <li>{{ $t('factoryResetItemData') }}</li>
-          <li>{{ $t('factoryResetItemRouting') }}</li>
-          <li>{{ $t('factoryResetItemPanel') }}</li>
-          <li>{{ $t('factoryResetItemStats') }}</li>
-        </ul>
-        <p class="text-base-content/70 text-xs">{{ $t('factoryResetAfter') }}</p>
-        <p class="text-error text-xs font-medium">{{ $t('factoryResetWarning') }}</p>
-        <div class="flex justify-end gap-2 pt-1">
+      <div class="flex flex-col">
+        <div class="border-base-content/10 relative border-b pb-2">
+          <h3 class="pr-8 text-base font-bold">{{ $t('factoryResetTitle') }}</h3>
+          <button
+            type="button"
+            class="btn btn-circle btn-ghost btn-xs absolute top-0 right-0"
+            aria-label="close"
+            @click="open = false"
+          >
+            <XMarkIcon class="h-4 w-4" />
+          </button>
+        </div>
+        <div class="mt-4 flex flex-col gap-3">
+          <p class="text-sm">{{ $t('factoryResetIntro') }}</p>
+          <p class="text-base-content/60 text-xs">{{ $t('factoryResetDetail') }}</p>
+        </div>
+        <div class="border-base-content/10 mt-4 flex items-center justify-end gap-2 border-t pt-2">
           <button
             type="button"
             class="btn btn-sm"
@@ -39,15 +46,15 @@
           </button>
           <button
             type="button"
-            class="btn btn-error btn-sm"
-            :disabled="busy"
+            class="btn btn-primary btn-sm"
+            :disabled="busy || countdown > 0"
             @click="run"
           >
             <span
               v-if="busy"
               class="loading loading-spinner loading-xs"
             />
-            {{ $t('factoryResetConfirm') }}
+            {{ countdown > 0 ? `${$t('confirm')} (${countdown})` : $t('confirm') }}
           </button>
         </div>
       </div>
@@ -59,14 +66,36 @@
 import { factoryReset } from '@/api/openbox'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import { showNotification } from '@/helper/notification'
-import { ExclamationTriangleIcon } from '@heroicons/vue/24/outline'
-import { ref } from 'vue'
+import { ExclamationTriangleIcon, XMarkIcon } from '@heroicons/vue/24/outline'
+import { onBeforeUnmount, ref, watch } from 'vue'
+
+// 危险操作:每次打开都先倒数 7 秒,倒数完才能点「确定」
+const COUNTDOWN_SECONDS = 7
 
 const open = ref(false)
 const busy = ref(false)
+const countdown = ref(0)
+let timer: ReturnType<typeof setInterval> | null = null
+
+const stop = () => {
+  if (timer) clearInterval(timer)
+  timer = null
+}
+
+watch(open, (isOpen) => {
+  stop()
+  if (!isOpen) return
+  countdown.value = COUNTDOWN_SECONDS
+  timer = setInterval(() => {
+    countdown.value -= 1
+    if (countdown.value <= 0) stop()
+  }, 1000)
+})
+
+onBeforeUnmount(stop)
 
 const run = async () => {
-  if (busy.value) return
+  if (busy.value || countdown.value > 0) return
   busy.value = true
   try {
     await factoryReset()

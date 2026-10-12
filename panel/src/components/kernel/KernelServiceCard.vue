@@ -4,15 +4,15 @@
     <div class="card-body gap-3 p-4 text-sm">
       <!-- 标题行:Open-Box 标识 + 版本号;右边是需要注意的提示和「恢复出厂设置」 -->
       <div class="flex flex-wrap items-center gap-x-3 gap-y-2">
-        <div class="inline-flex items-center gap-2 px-2 py-1">
+        <div class="inline-flex items-center gap-2 py-1">
           <img
             :src="logoUrl"
-            class="app-logo h-5 w-auto"
+            class="app-logo h-6 w-auto"
             alt="Open-Box"
           />
           <span
             v-if="openboxVersion"
-            class="font-mono text-base"
+            class="font-mono text-sm"
           >{{ openboxVersion }}</span>
         </div>
         <div class="ml-auto flex items-center gap-2">
