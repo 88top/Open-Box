@@ -18,7 +18,7 @@
            新建一条。 -->
       <div
         role="tablist"
-        class="tabs-box tabs tabs-sm"
+        class="tabs-box tabs tabs-xs sub-add-tabs"
         :class="isEditing && 'pointer-events-none opacity-60'"
         :aria-disabled="isEditing || undefined"
         :title="isEditing ? $t('subscriptionSourceLocked') : undefined"
@@ -37,7 +37,7 @@
       <!-- 右:内容分区 -->
       <div
         role="tablist"
-        class="tabs-box tabs tabs-sm"
+        class="tabs-box tabs tabs-xs sub-add-tabs"
       >
         <a
           v-for="item in tabs"
@@ -110,47 +110,50 @@
           </div>
           <p class="text-base-content/50 text-xs">{{ $t('subscriptionUrlHint') }}</p>
 
-          <!-- 定期更新:每隔几天、几点自动重新拉取。控件和后端设置里 Geo / 自身升级的计划一样 -->
-          <div class="flex flex-wrap items-center gap-x-3 gap-y-2 pt-1">
-            <span class="text-xs font-medium">{{ $t('subscriptionAutoUpdate') }}</span>
-            <input
-              v-model="autoUpdate.enabled"
-              type="checkbox"
-              class="toggle toggle-sm"
-            />
-            <template v-if="autoUpdate.enabled">
-              <span class="text-base-content/70 text-sm">{{ $t('geoUpdateEvery') }}</span>
-              <select
-                v-model.number="autoUpdate.days"
-                class="select select-sm w-24"
-              >
-                <option
-                  v-for="d in [1, 2, 3, 7, 14, 30]"
-                  :key="d"
-                  :value="d"
-                >{{ $t('geoUpdateDays', { days: d }) }}</option>
-              </select>
-              <select
-                v-model.number="autoUpdate.hour"
-                class="select select-sm w-24"
-              >
-                <option
-                  v-for="h in 24"
-                  :key="h - 1"
-                  :value="h - 1"
-                >{{ String(h - 1).padStart(2, '0') }}:00</option>
-              </select>
-            </template>
+          <!-- 定期更新:每隔几天、几点自动重新拉取。控件和后端设置里 Geo / 自身升级的计划一样。
+               右边是「订阅 DNS 解析」的展开开关,输入框在下面,两种来源模式共用 -->
+          <div class="flex items-start gap-x-3 gap-y-2 pt-1">
+            <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-2">
+              <span class="text-xs font-medium">{{ $t('subscriptionAutoUpdate') }}</span>
+              <input
+                v-model="autoUpdate.enabled"
+                type="checkbox"
+                class="toggle toggle-sm"
+              />
+              <template v-if="autoUpdate.enabled">
+                <span class="text-base-content/70 text-sm">{{ $t('geoUpdateEvery') }}</span>
+                <select
+                  v-model.number="autoUpdate.days"
+                  class="select select-sm w-24"
+                >
+                  <option
+                    v-for="d in [1, 2, 3, 7, 14, 30]"
+                    :key="d"
+                    :value="d"
+                  >{{ $t('geoUpdateDays', { days: d }) }}</option>
+                </select>
+                <select
+                  v-model.number="autoUpdate.hour"
+                  class="select select-sm w-24"
+                >
+                  <option
+                    v-for="h in 24"
+                    :key="h - 1"
+                    :value="h - 1"
+                  >{{ String(h - 1).padStart(2, '0') }}:00</option>
+                </select>
+              </template>
+            </div>
             <button
               type="button"
-              class="btn btn-ghost btn-xs text-base-content/90 ml-auto font-normal"
+              class="btn btn-ghost btn-xs shrink-0 gap-1 font-normal"
               :aria-expanded="nodeDnsOpen"
               @click="nodeDnsOpen = !nodeDnsOpen"
             >
               {{ $t('subscriptionNodeDnsToggle') }}
-              <component
-                :is="nodeDnsOpen ? ChevronUpIcon : ChevronDownIcon"
-                class="h-3.5 w-3.5"
+              <ChevronDownIcon
+                class="h-3.5 w-3.5 transition-transform"
+                :class="nodeDnsOpen ? 'rotate-180' : ''"
               />
             </button>
           </div>
@@ -158,41 +161,27 @@
             v-if="autoUpdate.enabled"
             class="text-base-content/50 text-xs"
           >{{ $t('subscriptionAutoUpdateHint') }}</p>
-
-          <!-- 订阅 DNS 解析:机场要求节点域名用它自己的 DoH 解析时填(相当于 OpenClash 的
-               proxy-server-nameserver / nameserver-policy)。只解析这份订阅的节点服务器域名 -->
-          <div
-            v-if="nodeDnsOpen"
-            class="flex flex-col gap-1 pt-1"
-          >
-            <label class="text-xs font-medium">{{ $t('subscriptionNodeDnsLabel') }}</label>
-            <div class="flex flex-wrap items-center gap-2">
-              <input
-                v-model.trim="nodeDnsUrl"
-                type="text"
-                class="input input-sm min-w-0 flex-[3] font-mono"
-                :placeholder="$t('subscriptionNodeDnsUrlPlaceholder')"
-                autocomplete="off"
-                spellcheck="false"
-              />
-              <input
-                v-model.trim="nodeDnsBootstrap"
-                type="text"
-                class="input input-sm min-w-0 flex-[2] font-mono"
-                :placeholder="$t('subscriptionNodeDnsBootstrapPlaceholder')"
-                autocomplete="off"
-                spellcheck="false"
-              />
-            </div>
-            <p class="text-base-content/50 text-xs">{{ $t('subscriptionNodeDnsHint') }}</p>
-          </div>
         </div>
 
         <div
           v-else
           class="flex flex-col gap-1"
         >
-          <label class="text-xs font-medium">{{ $t('subscriptionContentLabel') }}</label>
+          <div class="flex items-center gap-2">
+            <label class="text-xs font-medium">{{ $t('subscriptionContentLabel') }}</label>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs ml-auto gap-1 font-normal"
+              :aria-expanded="nodeDnsOpen"
+              @click="nodeDnsOpen = !nodeDnsOpen"
+            >
+              {{ $t('subscriptionNodeDnsToggle') }}
+              <ChevronDownIcon
+                class="h-3.5 w-3.5 transition-transform"
+                :class="nodeDnsOpen ? 'rotate-180' : ''"
+              />
+            </button>
+          </div>
           <textarea
             v-model="content"
             rows="8"
@@ -202,6 +191,36 @@
           <p class="text-base-content/50 text-xs">{{ $t('subscriptionContentHint') }}</p>
         </div>
 
+        <!-- 订阅 DNS 解析:机场要求节点域名用它自己的 DoH 解析时填(相当于 OpenClash 的
+             proxy-server-nameserver / nameserver-policy)。只解析这份订阅的节点服务器域名;
+             「订阅」和「节点」两种来源都能配 -->
+        <div
+          v-if="nodeDnsOpen"
+          class="flex flex-col gap-1"
+        >
+          <label class="text-xs font-medium">{{ $t('subscriptionNodeDnsLabel') }}</label>
+          <div class="flex flex-col gap-2 sm:flex-row">
+            <input
+              v-model="nodeDnsUrl"
+              type="text"
+              class="input input-sm min-w-0 flex-1 font-mono text-xs"
+              :placeholder="$t('subscriptionNodeDnsUrlPlaceholder')"
+              autocomplete="off"
+            />
+            <input
+              v-model="nodeDnsBootstrap"
+              type="text"
+              class="input input-sm w-full font-mono text-xs sm:w-48"
+              :placeholder="$t('subscriptionNodeDnsBootstrapPlaceholder')"
+              autocomplete="off"
+            />
+          </div>
+          <p
+            v-if="nodeDnsError"
+            class="text-error text-xs"
+          >{{ $t(nodeDnsError) }}</p>
+          <p class="text-base-content/50 text-xs">{{ $t('subscriptionNodeDnsHint') }}</p>
+        </div>
       </div>
 
       <!-- key 绑到订阅 id:切换编辑对象时强制重建编辑器,否则它内部的 reactive 行
@@ -233,8 +252,11 @@
       </div>
     </div>
 
-    <!-- 底栏:与 v0.1.311 一致,上沿一条分隔线,通栏(抵消弹窗内容区的 p-4),留出与内容之间的间距 -->
-    <div class="border-base-content/10 -mx-4 -mb-4 mt-9 border-t px-4 py-2">
+    <div class="mt-5 flex flex-col gap-2"></div>
+
+    <!-- 底栏走 DialogWrapper 的 footer 插槽(和 v0.1.317 一样):弹窗高度封顶在视口的 90%,
+         内容多了只滚中间的内容区,标题栏和底栏固定不动,不会再顶到上面的页签 -->
+    <template #footer>
       <div class="flex justify-end gap-2">
         <button
           type="button"
@@ -256,7 +278,7 @@
           {{ $t('subscriptionSave') }}
         </button>
       </div>
-    </div>
+    </template>
   </DialogWrapper>
 </template>
 
@@ -264,7 +286,7 @@
 import type { OpenboxRenameOptions, OpenboxSubscription, OpenboxSubscriptionAutoUpdate, OpenboxSubscriptionPreview } from '@/api/openbox'
 import { createSubscription, previewSubscription, updateSubscription } from '@/api/openbox'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
-import { ChevronDownIcon, ChevronUpIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
+import { ChevronDownIcon, PlusIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { debounce } from 'lodash'
 import { showNotification } from '@/helper/notification'
 import { notifySubscriptionSaved } from '@/store/openboxSubscriptions'
@@ -324,10 +346,44 @@ const initialAutoUpdate = (): OpenboxSubscriptionAutoUpdate => ({
 })
 const autoUpdate = ref<OpenboxSubscriptionAutoUpdate>(initialAutoUpdate())
 
-// 订阅 DNS 解析(DoH):没配就都留空;展开状态默认展开
+// 订阅 DNS 解析(DoH):没配就都留空。展开状态:已经配过就展开,否则收起(和 v0.1.317 一样)
 const nodeDnsUrl = ref(props.subscription?.nodeDns?.url ?? '')
 const nodeDnsBootstrap = ref(props.subscription?.nodeDns?.bootstrap ?? '')
-const nodeDnsOpen = ref(true)
+const nodeDnsOpen = ref(Boolean(props.subscription?.nodeDns?.url))
+
+// 填写校验:DoH 地址必须是 https://(不带账号密码);主机名是域名时,必须同时给出解析它用的 DNS(IP)。
+// 有错就不能保存,并自动展开输入框把提示显示出来。
+const IPV4_RE = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/
+const isIpAddress = (value: string) =>
+  IPV4_RE.test(value) || (/^[0-9a-f:]+$/i.test(value) && value.includes(':'))
+const nodeDnsError = computed(() => {
+  const url = nodeDnsUrl.value.trim()
+  const bootstrap = nodeDnsBootstrap.value.trim()
+  if (!url) return bootstrap ? 'subscriptionNodeDnsNeedUrl' : ''
+  let host = ''
+  try {
+    const parsed = new URL(url)
+    if (parsed.protocol !== 'https:' || parsed.username || parsed.password) {
+      return 'subscriptionNodeDnsInvalidUrl'
+    }
+    host = parsed.hostname.replace(/^\[|\]$/g, '')
+  } catch {
+    return 'subscriptionNodeDnsInvalidUrl'
+  }
+  if (bootstrap && !isIpAddress(bootstrap)) return 'subscriptionNodeDnsInvalidBootstrap'
+  if (!bootstrap && !isIpAddress(host)) return 'subscriptionNodeDnsNeedBootstrap'
+  return ''
+})
+watch(nodeDnsError, (error) => {
+  if (error) nodeDnsOpen.value = true
+})
+// 实际发出去的值:地址留空或校验没过就是 null(服务端存成没有)
+const effectiveNodeDns = computed<{ url: string; bootstrap?: string } | null>(() => {
+  const url = nodeDnsUrl.value.trim()
+  if (!url || nodeDnsError.value) return null
+  const bootstrap = nodeDnsBootstrap.value.trim()
+  return { url, ...(bootstrap ? { bootstrap } : {}) }
+})
 
 const renameOptions = ref<OpenboxRenameOptions>({})
 const handleRenameOptionsChange = (value: OpenboxRenameOptions) => {
@@ -386,7 +442,7 @@ const effectiveSource = computed<{ urls?: string[]; content?: string; name?: str
 })
 const hasSource = computed(() => effectiveSource.value !== null)
 
-const canSave = computed(() => hasSource.value && !previewing.value)
+const canSave = computed(() => hasSource.value && !previewing.value && !nodeDnsError.value)
 
 // Monotonic guard against out-of-order responses: a slow preview call for stale input must
 // never clobber a newer one that resolved first.
@@ -477,11 +533,8 @@ const handleSave = async () => {
       renameOptions: effectiveRenameOptions.value,
       // 粘贴来的订阅没有地址可回源,计划一律关
       autoUpdate: sourceMode.value === 'url' ? autoUpdate.value : { enabled: false, days: 1, hour: 4 },
-      // 地址留空 = 不用专用解析器(服务端存成没有);只填了一边时交给服务端校验并提示
-      nodeDns:
-        sourceMode.value === 'url' && (nodeDnsUrl.value || nodeDnsBootstrap.value)
-          ? { url: nodeDnsUrl.value, ...(nodeDnsBootstrap.value ? { bootstrap: nodeDnsBootstrap.value } : {}) }
-          : null,
+      // 地址留空或没通过校验 = 不用专用解析器(服务端存成没有);「订阅」「节点」两种来源都能配
+      nodeDns: effectiveNodeDns.value,
     }
     const res = props.subscription
       ? await updateSubscription(props.subscription.id, payload)
@@ -500,3 +553,12 @@ const handleSave = async () => {
   }
 }
 </script>
+
+<style>
+/* 弹窗里的两组分段页签:底色和 v0.1.317 一样(基础内容色 9% 叠在背景上),不带内阴影。
+   选择器带 #app-content 和两个类,优先级盖过全局的 #app-content .tabs-box。 */
+#app-content .tabs-box.sub-add-tabs {
+  background-color: color-mix(in oklab, var(--color-base-content) 9%, transparent);
+  box-shadow: none;
+}
+</style>
