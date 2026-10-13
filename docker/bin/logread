@@ -1,0 +1,3 @@
+#!/bin/sh
+# 部署流程通过 logread 检查 sing-box 的 FATAL，容器日志仍可通过 docker compose logs 查看。
+cat /tmp/openbox-core.log 2>/dev/null

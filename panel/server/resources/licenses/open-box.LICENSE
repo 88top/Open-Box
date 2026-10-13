@@ -1,0 +1,59 @@
+Open-Box Proprietary Software License
+Copyright (c) 2026 Open-Box authors. All rights reserved.
+Effective for proprietary material distributed with Open-Box v0.1.321 and later.
+
+1. Scope
+Open-Box's original proprietary code and original assets are not open source.
+This license applies only to rights held by the Open-Box copyright holders.
+Third-party components and material previously distributed under an open-source
+license remain governed by their respective licenses. This license does not
+revoke permissions previously granted for any earlier version or material.
+
+2. Permitted use
+You may download official releases, install and run them on your devices, and
+make the local copies and backups necessary for installation, offline use,
+updates and recovery. Published deployment scripts and configuration templates
+may be used and modified for deploying your own installations. This license
+does not impose a hardware vendor restriction or require cloud verification.
+Any separately licensed paid feature remains subject to its own entitlement.
+
+3. Restrictions
+Except as expressly permitted above, separately authorized in writing by the
+copyright holder, or allowed by applicable law, you must not:
+ - copy, publish, redistribute, sublicense or sell proprietary code or assets;
+ - create or distribute modified or repackaged proprietary versions, including
+   renamed products, firmware images or container images;
+ - decompile, disassemble, reverse engineer or otherwise attempt to recover
+   the proprietary implementation or its source code;
+ - circumvent authorization checks, forge licenses or distribute tools for
+   bypassing authorization of proprietary features;
+ - remove or falsify copyright, license or attribution notices.
+Rights that applicable law makes non-waivable are not restricted. The above
+restrictions do not apply to third-party components where their own licenses
+permit the relevant activity, including applicable source-code rights.
+
+4. No additional rights
+A public repository, a free download, or possession of a release does not grant
+an open-source license to the proprietary material. Rights necessarily granted
+by GitHub's terms for material hosted on GitHub remain unaffected.
+
+5. Third-party notices
+See COPYRIGHT.md and the notices/licenses distributed with each component.
+The original MIT notice for zashboard is retained; sing-box retains its own
+license and corresponding source distribution. Neither is relicensed here.
+
+6. Warranty
+To the extent allowed by applicable law, the proprietary software is provided
+"AS IS", without warranties of any kind. Its copyright holders are not liable
+for damages arising from use of the software.
+
+中文说明
+Open-Box 自有代码和原创资源以闭源专有软件方式分发，并非开源项目。
+允许从官方发行版下载，在自己的设备上安装、运行，以及为离线使用、升级、
+备份和恢复制作必要的本地副本；允许为自己的部署使用、修改公开部署脚本和模板。
+未经权利人书面许可，不得复制传播自有代码、再分发或销售自有程序、制作换名或
+重新打包的衍生产品、反编译/反汇编/逆向恢复自有实现，或绕过授权、伪造许可证。
+上述限制以适用法律允许的范围为限，不限制法律不可排除的权利。
+第三方开源组件仍按各自许可证授权；本许可不追溯撤销旧版本或其他材料已经
+授予的开源许可，也不覆盖 GitHub 服务条款所必需的仓库查看和 fork 权利。
+完整条款见上文；第三方许可范围见 COPYRIGHT.md 及随组件提供的许可证。
