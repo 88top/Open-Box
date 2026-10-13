@@ -53,16 +53,4 @@ export const clientAppPageZh = {
   clientAppLastSync: '最后同步 {time}',
   clientAppNeverSynced: '还没同步过',
   clientAppShowQr: '二维码',
-
-  // 添加 / 修改订阅弹窗里的「订阅 DNS 解析」(节点域名专用 DoH,对照上游 v0.1.317)
-  subscriptionNodeDnsToggle: '订阅 DNS 解析',
-  subscriptionNodeDnsLabel: '节点域名解析（可选）',
-  subscriptionNodeDnsUrlPlaceholder: 'DoH 地址,如 https://dns.example.net:2096/路径',
-  subscriptionNodeDnsBootstrapPlaceholder: '解析 DoH 的 DNS(IP)',
-  subscriptionNodeDnsHint:
-    '机场要求节点域名用它自己的 DoH 解析时填(相当于 OpenClash 的 proxy-server-nameserver / nameserver-policy)。只用来解析这份订阅的节点服务器域名,普通网站和局域网的 DNS 不受影响;测速也按它解析。DoH 地址是域名时,右边要填解析它用的 DNS(IP)。',
-  subscriptionNodeDnsInvalidUrl: 'DoH 地址要以 https:// 开头',
-  subscriptionNodeDnsInvalidBootstrap: '解析 DoH 的 DNS 只能填 IP 地址',
-  subscriptionNodeDnsNeedBootstrap: 'DoH 地址是域名,右边要填解析它用的 DNS(IP)',
-  subscriptionNodeDnsNeedUrl: '填了解析 DoH 的 DNS,还要填 DoH 地址',
 }
