@@ -7,8 +7,8 @@ RUN chmod +x /opt/open-box/docker/bin/* /opt/open-box/debian/bin/* \
     && ln -s /opt/open-box/openwrt/bin/open-box /usr/local/bin/open-box
 ENV OPENBOX_PLATFORM=container OPENBOX_ROOT=/opt/open-box \
     LD_LIBRARY_PATH=/opt/open-box/node/lib OPENSSL_CONF=/dev/null \
-    TZ=Asia/Shanghai OPENBOX_PANEL_PORT=2026 OPENBOX_MASQUERADE=1
-EXPOSE 2026/tcp 53/tcp 53/udp
+    TZ=Asia/Shanghai OPENBOX_MASQUERADE=1
+EXPOSE 3036/tcp 53/tcp 53/udp
 HEALTHCHECK --interval=30s --timeout=5s --start-period=30s \
-    CMD curl -fsS "http://127.0.0.1:${OPENBOX_PANEL_PORT}/api/health" >/dev/null || exit 1
+    CMD . /opt/open-box/docker/bin/panel-port && curl -fsS "http://127.0.0.1:${PORT}/api/health" >/dev/null || exit 1
 ENTRYPOINT ["/sbin/tini", "-g", "--", "/opt/open-box/docker/bin/entrypoint"]

@@ -1,6 +1,6 @@
 services:
   open-box:
-    image: ${OPENBOX_IMAGE:-open-box:0.1.325}
+    image: ${OPENBOX_IMAGE:-open-box:0.1.326}
     restart: unless-stopped
     stop_grace_period: 30s
     logging:
@@ -16,7 +16,8 @@ services:
       net.ipv4.conf.default.send_redirects: "0"
     environment:
       TZ: ${TZ:-Asia/Shanghai}
-      OPENBOX_PANEL_PORT: ${OPENBOX_PANEL_PORT:-2026}
+      # Empty keeps the saved port; new data volumes default to 3036.
+      OPENBOX_PANEL_PORT: "${OPENBOX_PANEL_PORT:-}"
       OPENBOX_MASQUERADE: ${OPENBOX_MASQUERADE:-1}
       OPENBOX_PANEL_HEAP_MB: ${OPENBOX_PANEL_HEAP_MB:-160}
       OPENBOX_PANEL_RSS_LIMIT_MB: ${OPENBOX_PANEL_RSS_LIMIT_MB:-}

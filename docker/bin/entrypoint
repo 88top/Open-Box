@@ -3,11 +3,9 @@ set -eu
 ROOT=/opt/open-box
 export OPENBOX_PLATFORM=container OPENBOX_ROOT="$ROOT" OPENSSL_CONF=/dev/null
 export LD_LIBRARY_PATH="$ROOT/node/lib" ZASHBOARD_DB_PATH="$ROOT/data/openbox.sqlite"
-export PORT="${OPENBOX_PANEL_PORT:-2026}" HOST=0.0.0.0
+export HOST=0.0.0.0
+. "$ROOT/docker/bin/panel-port"
 . "$ROOT/docker/bin/panel-env"
-case "$PORT" in ''|*[!0-9]*) echo 'Invalid OPENBOX_PANEL_PORT' >&2; exit 1;; esac
-[ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || exit 1
-case "$PORT" in 53|7853|7854|7891|9095) echo 'Panel port conflicts with kernel' >&2; exit 1;; esac
 mkdir -p "$ROOT/etc" "$ROOT/data"
 printf '%s\n' "$PORT" > "$ROOT/data/panel-port"
 rm -f /tmp/openbox-core.pid /tmp/openbox-supervisor.pid /tmp/openbox-panel.pid
