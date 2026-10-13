@@ -103,6 +103,31 @@ jobs:
             echo "::warning::panel 里还有 liandu2024 字样,确认不是仓库地址后可忽略"
             grep -rnI "liandu2024" panel | cut -c1-200 | head -20
           fi
+
+          # 4a. 上一步换仓库地址会改写 panel/server 里的个别文件(如 index.mjs),
+          #     hardening-manifest.json 里记的 sha256 就对不上了,Docker 构建(scripts/build-docker.sh)会按它校验并失败。
+          #     按清单列出的文件重新计算,只替换清单文本里对应的哈希串,其余格式不动。
+          python3 - <<'PY'
+          import hashlib, pathlib
+          import json
+          server = pathlib.Path('panel/server')
+          mp = server / 'hardening-manifest.json'
+          if mp.exists():
+              text = mp.read_text(encoding='utf-8')
+              files = json.loads(text).get('files', {})
+              changed = []
+              for name, want in files.items():
+                  got = hashlib.sha256((server / name).read_bytes()).hexdigest()
+                  if got != want:
+                      text = text.replace(want, got)
+                      changed.append(name)
+              if changed:
+                  mp.write_text(text, encoding='utf-8')
+                  print('已按替换后的文件重算 hardening-manifest.json:', ', '.join(changed))
+              else:
+                  print('hardening-manifest.json 的哈希都对得上')
+          PY
+
           for f in scripts/install.sh scripts/update.sh scripts/uninstall.sh; do sh -n "$f"; done
           if [ -f scripts/build-docker.sh ]; then
             sh -n scripts/build-docker.sh
