@@ -15,8 +15,8 @@ on:
         description: 版本相同也强制重新同步
         type: boolean
         default: false
-  schedule:
-    - cron: '17 */6 * * *'
+  # schedule:
+  #   - cron: '17 */6 * * *'
 
 permissions:
   contents: write
