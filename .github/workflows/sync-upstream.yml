@@ -65,6 +65,27 @@ jobs:
           echo "$sha  app.tar.gz" | sha256sum -c -
           mkdir app && tar -xzf app.tar.gz -C app
 
+          # 2b. arm64 的原生内核:仓库里的 panel/server/native 来自上面 x64 的应用包(amd64),
+          #     arm64 的发布包必须换成上游 arm64 应用包里的那一份(scripts/build-release.sh 打 arm64 包时替换)。
+          #     只留 native 两个文件;上游 arm64 包里的 native 不是 linux/arm64 就直接失败,不带错的内核进仓库。
+          curl -fsSL --retry 3 -o components-arm64.json "$base/open-box-$tag-linux-arm64-components.json"
+          set -- $(python3 -c 'import json,sys;a=json.load(open(sys.argv[1]))["components"]["app"];print(a["asset"],a["sha256"])' components-arm64.json)
+          asset_arm64=$1; sha_arm64=$2
+          curl -fsSL --retry 3 -o app-arm64.tar.gz "$base/$asset_arm64"
+          echo "$sha_arm64  app-arm64.tar.gz" | sha256sum -c -
+          mkdir app-arm64 && tar -xzf app-arm64.tar.gz -C app-arm64
+          mkdir -p scripts/native-arm64
+          cp app-arm64/panel/server/native/openbox-core app-arm64/panel/server/native/core-build.json scripts/native-arm64/
+          chmod +x scripts/native-arm64/openbox-core
+          python3 - <<'PY'
+          import json
+          c = json.load(open('scripts/native-arm64/core-build.json'))
+          if c.get('os') != 'linux' or c.get('arch') != 'arm64':
+              raise SystemExit('上游 arm64 应用包里的原生内核不是 linux/arm64:' + json.dumps(c))
+          print('arm64 原生内核:', c.get('buildID'))
+          PY
+          rm -rf app-arm64 app-arm64.tar.gz components-arm64.json
+
           # 3. 覆盖(不删除你自己新增的文件)
           rsync -a app/openwrt/ openwrt/
           rsync -a app/debian/ debian/
