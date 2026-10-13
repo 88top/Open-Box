@@ -356,3 +356,72 @@ jobs:
               gh release upload "${{ env.RELEASE_TAG }}" "clients/$name" --clobber -R "$GITHUB_REPOSITORY"
             done
           done
+
+  # Docker 镜像:主发布完成之后再单独构建,事后补传到同一个 Release,不拖慢主发布。
+  # 镜像只是把本次 release 的 tarball 装进 alpine(scripts/build-docker.sh,取自上游),不重新编译任何东西。
+  # arm64 在 x64 的 runner 上通过 QEMU 构建(只有一步 apk add 要跑目标架构的程序)。
+  docker:
+    name: Docker image (${{ matrix.arch }})
+    needs: release
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+    strategy:
+      fail-fast: false
+      matrix:
+        arch: [x64, arm64]
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Check Docker sources
+        id: chk
+        run: |
+          if [ -f docker/Dockerfile ] && [ -f scripts/build-docker.sh ]; then
+            echo "has=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "::warning::仓库里没有 docker/ 或 scripts/build-docker.sh,本次不构建 Docker 镜像"
+            echo "has=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      # 取本次 build 任务产出的完整发布包(含不带版本号的 open-box-linux-<arch>.tar.gz 和 .sha256)
+      - uses: actions/download-artifact@v4
+        if: steps.chk.outputs.has == 'true'
+        with:
+          name: open-box-linux-${{ matrix.arch }}
+          path: pkg
+      - uses: docker/setup-qemu-action@v3
+        if: steps.chk.outputs.has == 'true' && matrix.arch == 'arm64'
+      - uses: docker/setup-buildx-action@v3
+        if: steps.chk.outputs.has == 'true'
+
+      - name: Build image from the release package
+        if: steps.chk.outputs.has == 'true'
+        run: |
+          set -eu
+          ver="${RELEASE_TAG#v}"
+          sh scripts/build-docker.sh "${{ matrix.arch }}" pkg "open-box:$ver"
+          mkdir -p dist-docker
+          out="open-box-${RELEASE_TAG}-docker-linux-${{ matrix.arch }}.tar.gz"
+          docker save "open-box:$ver" | gzip -9 > "dist-docker/$out"
+          (cd dist-docker && sha256sum "$out" > "$out.sha256")
+          ls -la dist-docker
+
+      # Compose 部署包(只在 x64 任务里做一份):镜像版本号换成本次版本
+      - name: Pack Compose files
+        if: steps.chk.outputs.has == 'true' && matrix.arch == 'x64'
+        run: |
+          set -eu
+          ver="${RELEASE_TAG#v}"
+          d=open-box-docker
+          mkdir -p "$d"
+          cp docker/compose.yaml docker/.env.example "$d/"
+          sed -i "s#open-box:[0-9][0-9A-Za-z.]*#open-box:$ver#g" "$d/compose.yaml" "$d/.env.example"
+          out="open-box-${RELEASE_TAG}-docker-compose.tar.gz"
+          tar -czf "dist-docker/$out" "$d"
+          (cd dist-docker && sha256sum "$out" > "$out.sha256")
+
+      - name: Upload to the release
+        if: steps.chk.outputs.has == 'true'
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: gh release upload "$RELEASE_TAG" dist-docker/* --clobber -R "$GITHUB_REPOSITORY"

@@ -77,8 +77,23 @@ jobs:
           curl -fsSL --retry 3 -o scripts/install.sh "https://raw.githubusercontent.com/$UPSTREAM_REPO/$tag/scripts/install.sh"
           chmod +x scripts/install.sh scripts/update.sh scripts/uninstall.sh
 
+          # 3b. Docker:docker/ 目录和 scripts/build-docker.sh 在上游源码里(不在 release 包里),按同一版本取。
+          #     docker/ 完全跟随上游(会删掉上游已经没有的文件);旧版本的源码里没有 docker/ 就只警告、不失败。
+          curl -fsSL --retry 3 -o upstream-src.tar.gz "https://codeload.github.com/$UPSTREAM_REPO/tar.gz/refs/tags/$tag"
+          mkdir upstream-src && tar -xzf upstream-src.tar.gz -C upstream-src --strip-components=1
+          if [ -d upstream-src/docker ] && [ -f upstream-src/scripts/build-docker.sh ]; then
+            mkdir -p docker
+            rsync -a --delete upstream-src/docker/ docker/
+            cp upstream-src/scripts/build-docker.sh scripts/build-docker.sh
+            chmod +x scripts/build-docker.sh
+          else
+            echo "::warning::上游 $tag 的源码里没有 docker/ 或 scripts/build-docker.sh,本次不同步 Docker 部分"
+          fi
+          rm -rf upstream-src upstream-src.tar.gz
+
           # 4. 仓库地址换回自己的(panel 里的 updater.mjs 和前端文件也要换,否则面板会去检查上游版本)
           targets="openwrt debian scripts/install.sh scripts/update.sh scripts/uninstall.sh"
+          if [ -d docker ] && [ -f scripts/build-docker.sh ]; then targets="$targets docker scripts/build-docker.sh"; fi
           grep -rlI "$UPSTREAM_REPO" $targets panel | xargs -r sed -i "s#$UPSTREAM_REPO#$OWN_REPO#g"
           if grep -rnI "liandu2024" $targets; then
             echo "仍有指向上游的残留(见上),请人工处理后再同步" >&2
@@ -89,6 +104,10 @@ jobs:
             grep -rnI "liandu2024" panel | cut -c1-200 | head -20
           fi
           for f in scripts/install.sh scripts/update.sh scripts/uninstall.sh; do sh -n "$f"; done
+          if [ -f scripts/build-docker.sh ]; then
+            sh -n scripts/build-docker.sh
+            for f in docker/bin/*; do sh -n "$f"; done
+          fi
 
           # 4b. 上游 terminal-test.test.mjs 在 app.listen 之后立刻读 address().port,
           #     address() 此时还是 null,测试抛 TypeError,server 没关,node --test 进程退不出来。
