@@ -479,3 +479,78 @@ refresh_update_script`
   assert.equal(fs.readFileSync(path.join(dir, 'fresh'), 'utf8'), '1')
   assert.equal(fs.readFileSync(path.join(dir, 'urls'), 'utf8').trim().split('\n').length, 2)
 })
+
+// 面板 / LuCI 的旧 worker 把渠道放在环境里，取到最新脚本后又通过 argv 接力。
+// 最新脚本必须能真正解析这两份记录，不能只用打印 argv 的假脚本验接力。
+const channelScan = update.slice(update.indexOf('_probe_or_cancel_scan=0'), update.indexOf('\nif [ "$_probe_or_cancel_scan"', update.indexOf('_probe_or_cancel_scan=0')))
+const updateArgs = update.slice(update.indexOf('DETACH=0\n'), update.indexOf('\n# --detach 转发子进程'))
+const parseUpdateArgs = (args, env = {}) => spawnSync('sh', ['-c', `set -eu
+die() { echo "$*" >&2; exit 1; }
+${channelScan}
+${updateArgs}
+printf 'channel=%s\\nprefix=%s\\nexpect=%s\\nrollback=%s\\n' "$CHANNEL_OVERRIDE" "$CLI_MIRROR_PREFIX" "$EXPECT_VERSION" "$ROLLBACK_MODE"`, 'update-test', ...args], { encoding: 'utf8', env: { ...process.env, ...env } })
+
+test('渠道显式参数优先于旧 worker 的环境记录，命令行里的双渠道仍拒绝', () => {
+  const inherited = { OPENBOX_UPDATE_CHANNEL_OVERRIDE: 'mirror', OPENBOX_UPDATE_MIRROR_PREFIX: 'https://old.test' }
+  for (const [args, expected] of [
+    [['--direct'], 'channel=direct\nprefix='],
+    [['--mirror'], 'channel=mirror\nprefix='],
+    [['--mirror', 'https://new.test'], 'channel=mirror\nprefix=https://new.test'],
+  ]) {
+    const r = parseUpdateArgs([...args, '--expect', 'v0.1.319'], inherited)
+    assert.equal(r.status, 0, r.stderr)
+    assert.ok(r.stdout.startsWith(expected + '\n'), r.stdout)
+    assert.match(r.stdout, /expect=v0\.1\.319/)
+  }
+  const worker = parseUpdateArgs([], inherited)
+  assert.equal(worker.status, 0, worker.stderr)
+  assert.match(worker.stdout, /channel=mirror\nprefix=https:\/\/old\.test/)
+  for (const args of [['--direct', '--mirror'], ['--mirror', '--direct']]) {
+    const r = parseUpdateArgs(args, inherited)
+    assert.notEqual(r.status, 0)
+    assert.match(r.stderr, /不能与/)
+  }
+  for (const args of [['--probe', 'direct'], ['--cancel']]) {
+    const r = parseUpdateArgs(args, inherited)
+    assert.equal(r.status, 0, r.stderr)
+    assert.match(r.stdout, /^channel=\nprefix=\n/)
+  }
+})
+
+test('后台 worker 获取最新脚本后实际重新解析，直连、内置镜像、指定镜像均可接力', () => {
+  for (const [channel, prefix, rollback] of [['direct', '', '0'], ['mirror', '', '0'], ['mirror', 'https://mirror.test', '1']]) {
+    const dir = tmp()
+    const fresh = `#!/bin/sh\n# Open-Box 升级脚本\nset -eu\ndie() { echo "$*" >&2; exit 1; }\n${channelScan}\n${updateArgs}\nprintf 'channel=%s\\nprefix=%s\\nexpect=%s\\nrollback=%s\\n' "$CHANNEL_OVERRIDE" "$CLI_MIRROR_PREFIX" "$EXPECT_VERSION" "$ROLLBACK_MODE" > '${dir}/parsed'\n`
+    fs.writeFileSync(path.join(dir, 'latest.sh'), fresh)
+    const r = sh(`set -eu; TMP_PARENT='${dir}'; REPO=timeflysoon/Open-Box
+CHANNEL_OVERRIDE='${channel}'; CLI_MIRROR_PREFIX='${prefix}'; ROLLBACK_MODE='${rollback}'; EXPECT_VERSION=v0.1.319
+OPENBOX_UPDATE_RELOCATED=0; BUILTIN_MIRRORS=https://builtin.test
+write_status() { :; }; die() { echo "$*" >&2; exit 1; }
+detect_downloader() { :; }; ensure_tmp_parent() { :; }; cancel_requested() { return 1; }
+${fn(update, 'resolve_channel')}
+fetch_to_file_probe() { cp '${dir}/latest.sh' "$2"; }
+${fn(update, 'refresh_update_script')}
+refresh_update_script`, { OPENBOX_UPDATE_CHANNEL_OVERRIDE: channel, OPENBOX_UPDATE_MIRROR_PREFIX: prefix, OPENBOX_UPDATE_EXPECT: 'v0.1.319' })
+    assert.equal(r.status, 0, `${channel} ${prefix}: ${r.stderr}`)
+    assert.equal(fs.readFileSync(path.join(dir, 'parsed'), 'utf8'), `channel=${channel}\nprefix=${prefix}\nexpect=v0.1.319\nrollback=${rollback}\n`)
+  }
+})
+
+test('真实启动顺序:后台 worker 未指定镜像前缀时，刷新脚本之前已初始化内置镜像', () => {
+  const dir = tmp()
+  const bin = path.join(dir, 'bin')
+  fs.mkdirSync(bin)
+  const fresh = `#!/bin/sh\n# Open-Box 升级脚本\nset -eu\ndie() { echo "$*" >&2; exit 1; }\n${channelScan}\n${updateArgs}\nprintf '%s\\n' "$CHANNEL_OVERRIDE" > '${dir}/parsed'\n`
+  fs.writeFileSync(path.join(dir, 'latest.sh'), fresh)
+  fs.writeFileSync(path.join(bin, 'curl'), `#!/bin/sh\nwhile [ $# -gt 0 ]; do\ncase "$1" in -o) shift; output="$1" ;; http*) echo "$1" >> '${dir}/urls' ;; esac\nshift\ndone\ncp '${dir}/latest.sh' "$output"\n`, { mode: 0o755 })
+  // 执行真实文件开头直到刷新入口，避免预先在测试里赋 BUILTIN_MIRRORS 而遮住初始化顺序错误。
+  const worker = path.join(dir, 'worker.sh')
+  fs.writeFileSync(worker, update.slice(0, update.indexOf('\n# 走到这里,说明既不是 --probe')))
+  const r = spawnSync('sh', [worker], { encoding: 'utf8', env: { ...process.env,
+    PATH: `${bin}:${process.env.PATH}`, OPENBOX_TMPDIR: dir, OPENBOX_UPDATE_RELOCATED: '1',
+    OPENBOX_UPDATE_REFRESHED: '0', OPENBOX_UPDATE_CHANNEL_OVERRIDE: 'mirror', OPENBOX_UPDATE_MIRROR_PREFIX: '',
+  } })
+  assert.equal(r.status, 0, r.stderr)
+  assert.equal(fs.readFileSync(path.join(dir, 'parsed'), 'utf8').trim(), 'mirror')
+  assert.match(fs.readFileSync(path.join(dir, 'urls'), 'utf8'), /^https:\/\/ghfast\.top\/https:\/\/github\.com\//)
+})
