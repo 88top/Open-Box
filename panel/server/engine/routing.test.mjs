@@ -11,14 +11,15 @@ const policy = (over = {}) => ({ id: 'p1', name: '谷歌', rulesets: ['geosite-g
 // 站点集按 IP 判的那一份:带着「连接没有域名」的前提(有域名的访问只按域名判,都没命中走兜底)
 const ipOnly = (match, outbound) => andRule([match, noDomainGuard()], { outbound })
 
-// 前四条规则(sniff / DNS 劫持 / 内网直连 / NTP 对时直连)和站点集无关,单独断言一次,
+// 前五条规则(sniff / DNS 劫持两条 / 内网直连 / NTP 对时直连)和站点集无关,单独断言一次,
 // 后面的用例从 P 往后看它们各自关心的那几条,免得任何一条规则挪位置就全线飘红。
-const P = 4
-test('固定前缀:sniff → DNS 劫持 → 内网直连 → NTP 对时直连(GitHub #156)', () => {
+const P = 5
+test('固定前缀:sniff → DNS 劫持(认出是 DNS 的 + dns-in 收到的一律,GitHub #550)→ 内网直连 → NTP 对时直连(GitHub #156)', () => {
   const { route } = build({ policies: [] })
   assert.deepEqual(route.rules.slice(0, P), [
     { action: 'sniff' },
     { protocol: 'dns', action: 'hijack-dns' },
+    { inbound: ['dns-in'], action: 'hijack-dns' },
     { ip_is_private: true, outbound: 'direct' },
     { network: 'udp', port: [123], outbound: 'direct' },
   ])
@@ -112,6 +113,16 @@ test('dnsMode=off 时只劫持 dns-in 自己收到的查询（AdGuard 等主动�
   assert.deepEqual(route.rules.filter((r) => r.action === 'hijack-dns'), [{ inbound: ['dns-in'], action: 'hijack-dns' }])
   assert.ok(!route.rules.some((r) => r.protocol === 'dns'))
   assert.ok(!route.rules.some((r) => r.override_address))
+})
+
+test('dnsMode=hijack 时 dns-in(和名单外终端的 dns-in-direct)收到的连接一律劫持(GitHub #550):不发 DNS 的空连接嗅探不出 DNS,以前落到内网直连、拨回自己 :7853 无限自环', () => {
+  const { route } = build({ policies: [] }, { dnsMode: 'hijack' })
+  const hijacks = route.rules.filter((r) => r.action === 'hijack-dns')
+  assert.deepEqual(hijacks, [{ protocol: 'dns', action: 'hijack-dns' }, { inbound: ['dns-in'], action: 'hijack-dns' }])
+  // 排在内网直连前面:连 <路由器 IP>:7853 的连接轮不到 ip_is_private → 直连
+  assert.ok(route.rules.findIndex((r) => r.inbound) < route.rules.findIndex((r) => r.ip_is_private))
+  const admit = build({ policies: [] }, { dnsMode: 'hijack', dnsDirectInbound: 'dns-in-direct' })
+  assert.ok(admit.route.rules.some((r) => r.action === 'hijack-dns' && JSON.stringify(r.inbound) === JSON.stringify(['dns-in', 'dns-in-direct'])))
 })
 
 test('dnsMode=dnsmasq 时只劫持 dns-in,避免 tun→dns-in 自环', () => {
@@ -349,7 +360,7 @@ test('IPv6 分层 · 代理 v6 降为 IPv4:出口是节点组的规则(类别不
   const G = flipFlagTag({ id: 'g' })
   const CN = flipFlagTag({ id: 'cn' })
   const v6 = (match, flag) => andRule([match, { rule_set: [flag] }, { ip_version: 6 }], { action: 'reject' })
-  const rules = route.rules.slice(2)   // 跳过 sniff / hijack-dns(前置自定义分流排在 ip_is_private 前面)
+  const rules = route.rules.slice(3)   // 跳过 sniff / 两条 hijack-dns(前置自定义分流排在 ip_is_private 前面)
   // 前置自定义分流(出口是节点组 / 直连,类别定死):代理行前有 v6 拒绝,直连行没有
   assert.deepEqual(rules[0], { domain_suffix: ['x.test'], ip_version: 6, action: 'reject' })
   assert.deepEqual(rules[1], { domain_suffix: ['x.test'], outbound: '香港-自动' })
@@ -389,7 +400,7 @@ test('屏蔽 QUIC(#163):出口是节点组的规则前面直接插 UDP 443 拒�
   const QUIC = { network: 'udp', port: 443 }
   const quic = (match, flag) => andRule([match, { rule_set: [flag] }, QUIC], { action: 'reject' })
   const { route } = build(routing, { rejectQuicFor: isProxy })
-  const rules = route.rules.slice(2)   // 跳过 sniff / hijack-dns
+  const rules = route.rules.slice(3)   // 跳过 sniff / 两条 hijack-dns
   assert.deepEqual(rules[0], { domain_suffix: ['x.test'], network: 'udp', port: 443, action: 'reject' })
   assert.deepEqual(rules[1], { domain_suffix: ['x.test'], outbound: '香港-自动' })
   // 用户按端口写的规则原样:不叠 443
@@ -401,7 +412,7 @@ test('屏蔽 QUIC(#163):出口是节点组的规则前面直接插 UDP 443 拒�
   assert.deepEqual(rules[g + 2], { rule_set: ['geosite-cn'], outbound: '国内' })
   assert.deepEqual(rules.at(-1), andRule([{ rule_set: [FLIP_FALLBACK_TAG] }, QUIC], { action: 'reject' }), '兜底:收尾一条,挂兜底的开关')
   // 和「代理 v6 降为 IPv4」一起开:先 v6 拒绝、再 QUIC 拒绝、再规则本身
-  const both = build(routing, { rejectQuicFor: isProxy, rejectV6For: isProxy }).route.rules.slice(2)
+  const both = build(routing, { rejectQuicFor: isProxy, rejectV6For: isProxy }).route.rules.slice(3)
   assert.deepEqual(both.slice(0, 3), [
     { domain_suffix: ['x.test'], ip_version: 6, action: 'reject' },
     { domain_suffix: ['x.test'], network: 'udp', port: 443, action: 'reject' },

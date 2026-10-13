@@ -404,3 +404,33 @@ test('runDeploy:站点集引用的规则集随包规则库里已经没有了,跳
     setAvailableGeoTags(null)
   }
 })
+
+test('runDeploy:域名过滤名单下不来不拦内核启动(GitHub #562 #565):跳过那份、带黄色提示;过滤整体准备不好(内存不够)时这次关着过滤生成,记进生成输入', async () => {
+  const { runDeploy } = await import('./deploy-runner.mjs')
+  const setup = (files = {}) => {
+    const m = new Map()
+    const store = createStore({ get: (k) => (m.has(k) ? m.get(k) : null), set: (k, v) => m.set(k, v), del: (k) => m.delete(k) })
+    const paths = createPaths('/opt/open-box')
+    store.setGroups([])
+    // 0.0.0.0 不用联网就被地址检查挡下:模拟「名单下不来」
+    store.setProfile({ routing: { fallbackDefault: 'direct', policies: [] }, clientRoutes: [], dns: { split: true, mode: 'off', filter: { enabled: true, allowDomains: [], lists: [{ id: 'anti-ad', name: 'anti-AD', url: 'http://0.0.0.0/anti-ad.txt', enabled: true }] } }, tun: { autoRedirect: false } })
+    store.setNodes([])
+    const ctx = createMockContext({ files: { [paths.singbox]: 'x', '/dev/net/tun': '', '/etc/resolv.conf': 'nameserver 223.5.5.5\n', ...files }, execResults: { '/etc/init.d/openbox status': { code: 0, stdout: 'running' } } })
+    return { store, paths, ctx }
+  }
+  const fetchImpl = async () => new Response('{}', { status: 404 })
+  const a = setup()
+  const r = await runDeploy({ store: a.store, ctx: a.ctx, paths: a.paths, fetchImpl, lateWatch: false })
+  assert.equal(r.ok, true, `${r.stage}: ${r.message}`)
+  assert.match(r.warning, /域名过滤名单「anti-AD」没下载下来\(.+\),这次先不按它过滤,内核照常启动;能连上后在「DNS 设置」点「更新名单」/)
+  assert.equal(JSON.parse(a.ctx.files[configMetaPath(a.paths)]).dnsFilter.enabled, true)
+
+  const b = setup({ '/proc/meminfo': 'MemTotal: 997888 kB\nMemAvailable: 100000 kB\n' })
+  const low = await runDeploy({ store: b.store, ctx: b.ctx, paths: b.paths, fetchImpl, lateWatch: false })
+  assert.equal(low.ok, true, `${low.stage}: ${low.message}`)
+  assert.match(low.warning, /域名过滤这次没开\(可用内存只有 98 MB.*\),内核照常启动/)
+  const meta = JSON.parse(b.ctx.files[configMetaPath(b.paths)])
+  assert.equal(meta.buildInputs.dnsFilterOff, true, '在线更新节点时照样关着生成,和运行中的一致')
+  assert.equal(meta.dnsFilter.enabled, false, '右上角照常提示 DNS 设置还没生效')
+  assert.doesNotMatch(b.ctx.files[b.paths.configPath], /dns-filter-/)
+})

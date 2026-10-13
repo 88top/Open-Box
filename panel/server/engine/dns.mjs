@@ -220,7 +220,7 @@ export const buildDnsWithResolvers = (profile, options = {}) => {
   // 终端分流:哪些终端的解析由内核按终端答(engine/client-routes.mjs 的 terminalDnsRedirected)。劫持模式下内核接得到每台
   // 终端的查询,老样子全部按终端答;dnsmasq 模式下只有入口把查询转给内核 DNS 入站的那几类(system/entry-bypass.mjs)
   const clientRoutes = Array.isArray(options.clientRoutes) ? options.clientRoutes : []
-  const terminalDns = { dnsMode, splitDns: Boolean(profile.dns && profile.dns.split), directTag: (options.builtin || DEFAULT_BUILTIN).direct, ...(options.terminalDns || {}) }
+  const terminalDns = { dnsMode, splitDns: Boolean(profile.dns && profile.dns.split), directTag: (options.builtin || DEFAULT_BUILTIN).direct, blockTag: (options.builtin || DEFAULT_BUILTIN).block, ...(options.terminalDns || {}) }
   const answersPerTerminal = (cr) => dnsMode === 'hijack' || terminalDnsRedirected(cr, terminalDns)
   // dnsmasq 模式下转进来的终端不再经过 dnsmasq:本地主机名(DHCP 租约名、*.lan)照劫持模式的办法交回 dnsmasq,只管这些终端
   // 「只让这些终端进内核」名单外终端的专用入站(engine/config.mjs 的 DNS_DIRECT_INBOUND_TAG):查询一律直连解析

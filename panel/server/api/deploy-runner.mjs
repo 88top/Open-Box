@@ -383,7 +383,11 @@ export const buildCurrentConfig = (store, systemDns, { geoDir = createPaths(proc
 // 别处也变了的,才是真的要重启内核
 export const configFromInputs = (store, paths, inputs = {}, { ruleLists = {} } = {}) => {
   const profile = store.getProfile() || {}
-  const profilePatch = inputs.autoRedirectFallback ? { tun: { ...(profile.tun || {}), autoRedirect: false } } : undefined
+  const patch = {}
+  if (inputs.autoRedirectFallback) patch.tun = { ...(profile.tun || {}), autoRedirect: false }
+  // 域名过滤这次没准备好(部署时记下的,见 runDeployInner):照样关着生成,和运行中的一致
+  if (inputs.dnsFilterOff) patch.dns = { ...(profile.dns || {}), filter: { ...((profile.dns && profile.dns.filter) || {}), enabled: false } }
+  const profilePatch = Object.keys(patch).length ? patch : undefined
   const built = buildCurrentConfig(store, Array.isArray(inputs.systemDns) ? inputs.systemDns : [], {
     geoDir: paths.geoDir, rulesetDir: paths.rulesetDir, cacheFilePath: paths.cacheDb,
     selections: inputs.selections && typeof inputs.selections === 'object' ? inputs.selections : {},
@@ -449,6 +453,14 @@ export const skippedNodesWarning = (store, skipped) => {
   const shown = items.slice(0, SKIPPED_NODES_SHOWN).join(';')
   const more = items.length > SKIPPED_NODES_SHOWN ? `;另外还有 ${items.length - SKIPPED_NODES_SHOWN} 个` : ''
   return `有 ${items.length} 个节点内核不认,这次启动跳过了它们:${shown}${more}。其余照常;刷新订阅或修改这些节点后会重新检查`
+}
+
+// 域名过滤没全用上(GitHub #562 #565):missing = 下不来、本地也没有、这次跳过的名单;off = 整个过滤这次没准备好的原因
+export const dnsFilterWarning = (missing = [], off = '') => {
+  if (off) return `域名过滤这次没开(${off}),内核照常启动`
+  const names = missing.map((m) => `「${m.name}」`).join('、')
+  const reasons = [...new Set(missing.map((m) => m.error).filter(Boolean))].join(';')
+  return `域名过滤名单${names}没下载下来${reasons ? `(${reasons})` : ''},这次先不按${missing.length > 1 ? '它们' : '它'}过滤,内核照常启动;能连上后在「DNS 设置」点「更新名单」`
 }
 
 // 站点集 / 前置自定义分流里引用着、随包规则库里已经没有的规则集(上游删掉的分类,engine/routing-model.mjs 的
@@ -576,7 +588,16 @@ const runDeployInner = async ({ store, ctx, paths, fetchImpl = globalThis.fetch,
     const [systemDns, localSubnets] = await Promise.all([readSystemDns(ctx), readLocalSubnets(ctx)])
     const directHostCidrs = await resolveDirectHostCidrs(store, systemDns, lookup)
     const selections = resolveSelections(store, await fetchSelections(fetchImpl, store.getClashSecret()))
-    await prepareDnsFilter({ store, ctx, paths, force: refreshDnsFilter })
+    // 域名过滤不让内核起不来(GitHub #562 #565):下不来的名单 prepareDnsFilter 自己跳过(missing);别的原因准备不好
+    // (内存不够、规则总数超限……)这次先关着过滤生成配置。两种都在启动成功后弹黄色提示
+    let filterMissing = []
+    let filterOff = ''
+    try {
+      filterMissing = (await prepareDnsFilter({ store, ctx, paths, force: refreshDnsFilter }))?.missing || []
+    } catch (error) {
+      filterOff = error instanceof Error ? error.message : String(error)
+      console.warn(`[deploy] 域名过滤这次没开:${filterOff}`)
+    }
     // 规则集链接要排在生成配置之前:拉回来才知道每条名单编成了域名 / IP 哪几份 .srs,
     // 路由规则和 DNS 规则要凭这个决定引用哪几份(见 engine/routing-model.mjs)。
     // 这一步只往 rulesetDir 里写文件,失败原地返回,不动系统。
@@ -597,7 +618,7 @@ const runDeployInner = async ({ store, ctx, paths, fetchImpl = globalThis.fetch,
         ? await routeProxyDnsUpstreams({ store, ctx, paths, fetchImpl, systemDns }, profileNow)
         : []
       // 生成配置用到的、档案之外的输入:记进元数据(buildInputs),热替换按同样的输入重新生成、和运行中的比(configFromInputs)
-      let buildInputs = { systemDns, localSubnets, directHostCidrs, directHostDomains: directHostDomains(store), selections, nativeBypass, dnsUpstreamRoutes }
+      let buildInputs = { systemDns, localSubnets, directHostCidrs, directHostDomains: directHostDomains(store), selections, nativeBypass, dnsUpstreamRoutes, ...(filterOff ? { dnsFilterOff: true } : {}) }
       for (const r of dnsUpstreamRoutes) {
         if (r.error) console.warn(`[deploy] 代理 DNS 上游 ${r.server} 按目标分流判不出线路,先走兜底:${r.error}`)
         else if (r.reject) console.warn(`[deploy] 代理 DNS 上游 ${r.server} 被目标分流拒绝(第 ${Number(r.ruleIndex) + 1} 条),走代理的域名解析会失败`)
@@ -643,6 +664,7 @@ const runDeployInner = async ({ store, ctx, paths, fetchImpl = globalThis.fetch,
         buildInputs = { ...buildInputs, skipNodes: [...skippedNodes.keys()] }
       }
       if (result.ok && skippedNodes.size) result.warning = [result.warning, skippedNodesWarning(store, skippedNodes)].filter(Boolean).join(';')
+      if (result.ok && (filterMissing.length || filterOff)) result.warning = [result.warning, dnsFilterWarning(filterMissing, filterOff)].filter(Boolean).join(';')
       const missingRulesets = result.ok ? normalizeRouting((store.getProfile() || {}).routing).missingRulesets || [] : []
       if (missingRulesets.length) result.warning = [result.warning, missingRulesetsWarning(missingRulesets)].filter(Boolean).join(';')
       // 跳过之后还是没起来(问题在别处):跳过的那几个也确实是坏的,和这次报出来的一起给界面标红

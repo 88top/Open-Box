@@ -96,18 +96,26 @@ export const entryBypassNft = ({ ports = '', portsMode = 'blacklist', clientRout
   }
   const portEls = bypassPortsElements(ports)
   const lanIfnames = [...new Set(lanIfaces)].filter((n) => IFNAME_RE.test(n))
+  // FakeIP 占位地址只有内核认得(解析没转到内核时、或者转之前缓存下来的):发往占位段的包不打放行位,照常进内核按规则走;
+  // 放行了就交给路由器按真实路由从宽带口发出去,哪都到不了。「不进内核」的终端、按端口放行(GitHub #572 #517)都这样
+  const f4 = (fakeIpCidrs.v4 || []).length ? ` ip daddr != ${set(fakeIpCidrs.v4)}` : ''
+  const f6 = (fakeIpCidrs.v6 || []).length ? ` ip6 daddr != ${set(fakeIpCidrs.v6)}` : ''
+  // 端口规则不分地址族,要排除占位段就按族拆成两条;没开 FakeIP 时还是一条
+  const notFake = f4 || f6 ? [`meta nfproto ipv4${f4} `, `meta nfproto ipv6${f6} `] : ['']
   if (portEls && portsMode === 'whitelist') {
     // 白名单:两头端口都不在名单上才放行(任一头命中就进内核 —— 回程包的源端口才是那个服务端口)。
     // 只管局域网口进来的包;路由器自己的 output 不动
     if (lanIfnames.length) {
       const iif = `iifname ${set(lanIfnames.map((n) => `"${n}"`))}`
-      inRules.push(`${iif} meta l4proto { tcp, udp } th dport != ${set([portEls])} th sport != ${set([portEls])} ${MARK}`)
+      for (const guard of notFake) inRules.push(`${iif} ${guard}meta l4proto { tcp, udp } th dport != ${set([portEls])} th sport != ${set([portEls])} ${MARK}`)
     }
   } else if (portEls) {
     for (const dir of ['dport', 'sport']) {
-      const rule = `meta l4proto { tcp, udp } th ${dir} ${set([portEls])} ${MARK}`
-      inRules.push(rule)
-      outRules.push(rule)
+      for (const guard of notFake) {
+        const rule = `${guard}meta l4proto { tcp, udp } th ${dir} ${set([portEls])} ${MARK}`
+        inRules.push(rule)
+        outRules.push(rule)
+      }
     }
   }
   const natRules = []
@@ -122,10 +130,7 @@ export const entryBypassNft = ({ ports = '', portsMode = 'blacklist', clientRout
   if (autoRedirect) {
     const blackSrc = bypassSources(clientRoutes)
     const black = byFamily(blackSrc.ips)
-    // 「不进内核」的终端手里的 FakeIP 占位地址只有内核认得(解析没转到内核时、或者转之前缓存下来的):发往占位段的包不打
-    // 放行位,照常进内核按规则走;放行了就交给路由器按真实路由发出去,哪都到不了
-    const f4 = (fakeIpCidrs.v4 || []).length ? ` ip daddr != ${set(fakeIpCidrs.v4)}` : ''
-    const f6 = (fakeIpCidrs.v6 || []).length ? ` ip6 daddr != ${set(fakeIpCidrs.v6)}` : ''
+    // 「不进内核」的终端发往占位段的包也不打放行位(f4 / f6 见上面端口那段)
     if (black.v4.length) inRules.push(`ip saddr ${set(black.v4)}${f4} ${MARK}`)
     if (black.v6.length) inRules.push(`ip6 saddr ${set(black.v6)}${f6} ${MARK}`)
     // 按 MAC 的黑名单也要在这里打放行位,不能只靠 tun 的 exclude_mac_address:那个只让内核的 nft

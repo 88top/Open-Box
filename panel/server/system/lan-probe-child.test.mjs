@@ -122,3 +122,18 @@ test('响应头读到空行才报 response,并带回 server / cf-mitigated 头�
   assert.deepEqual(r.result.headers, { server: 'cloudflare', 'cf-mitigated': 'challenge' })
   r.child.stdin.end('close\n')
 })
+
+test('响应头超过 16KB:状态行读到了就按状态码算成功(GitHub #583,Gemini 的响应头约 26KB);连状态行都没有才报失败', async (t) => {
+  const csp = `Content-Security-Policy: ${'x'.repeat(20 * 1024)}\r\n`
+  const big = await listen(t, net.createServer((s) => s.once('data', () => {
+    s.write(`HTTP/1.1 200 OK\r\nServer: gws\r\n${csp}${'X-Pad: y\r\n'.repeat(600)}Content-Length: 0\r\n\r\n`)
+  })))
+  const ok = await probe(t, big)
+  assert.equal(ok.result.event, 'response')
+  assert.equal(ok.result.status, 200)
+  assert.equal(ok.result.headers.server, 'gws', '超限前收到的响应头照样带回')
+  ok.child.stdin.end('close\n')
+  const junk = await listen(t, net.createServer((s) => s.once('data', () => { s.write('x'.repeat(40 * 1024)) })))
+  const bad = await probe(t, junk)
+  assert.equal(bad.result.event, 'error')
+})

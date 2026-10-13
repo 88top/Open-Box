@@ -92,7 +92,7 @@ if panel_healthy ${wait}; then echo healthy; else echo unhealthy; fi`
 
 test('升级顺序:新 Node 在停服务之前试;新面板应答 /api/health 之后才删旧版本,起不来就整体回退、把旧版本的内核拉起来', () => {
   const at = (needle) => {
-    const i = update.indexOf(needle)
+    const i = needle === 'if ! panel_healthy' ? update.lastIndexOf(needle) : update.indexOf(needle)
     assert.ok(i >= 0, `update.sh 里找不到:${needle}`)
     return i
   }
@@ -224,12 +224,13 @@ test('换文件途中失败(含 meta.json 换不上):整体回退,再把旧版�
 write_status() { :; }; info() { :; }; warn() { :; }
 die() { echo "die: $*"; exit 1; }
 rollback_components() { echo rollback >> '${root}/log'; return 0; }
+panel_healthy() { echo healthy >> '${root}/log'; return 0; }
 ${fn(update, 'restart_core')}
 ${fn(update, 'swap_failed')}
 swap_failed "替换 meta.json 失败。"`
   const r = sh(script)
   assert.equal(r.status, 1)
-  assert.equal(fs.readFileSync(path.join(root, 'log'), 'utf8'), `rollback\npanel start\ndeploy ${root}/panel/server/cli/deploy.mjs\n`)
+  assert.equal(fs.readFileSync(path.join(root, 'log'), 'utf8'), `rollback\npanel start\nhealthy\ndeploy ${root}/panel/server/cli/deploy.mjs\n`)
   assert.match(r.stdout, /die: 替换 meta\.json 失败。 已把 .*整体回退到升级前的版本.*;内核已重新生成配置并启动。请检查/)
 })
 
@@ -251,6 +252,7 @@ echo '{"ok":true}'
     const script = `set -eu
 INSTALL_ROOT='${root}'; CORE_WAS_RUNNING=1; TMPDIR='${root}'
 write_status() { :; }; info() { :; }; warn() { echo "[warn] $*"; }
+panel_healthy() { return 0; }
 sleep() { echo "sleep $1" >> '${root}/sleeps'; }
 ${fn(update, 'restart_core')}
 restart_core
@@ -441,4 +443,39 @@ echo DEPS-DONE`, { PATH: `${dir}/bin:/usr/bin:/bin`, D: dir })
     assert.ok(line.includes(`不装也能用;要装请自行执行:${pm} update && ${verb} kmod-nft-queue(固件的软件源里没有这个包`), `${pm}:${line}`)
     assert.ok(!r.stdout.includes('自动查找'), r.stdout)
   }
+})
+
+
+test('回退面板始终不应答时不部署内核,保留明确的手动启动提示(#557)', () => {
+  const r = sh(`set -eu; CORE_WAS_RUNNING=1
+panel_healthy() { return 1; }
+warn() { echo "warn:$*"; }
+${fn(update, 'restart_core')}
+restart_core
+echo "$CORE_MSG"`)
+  assert.equal(r.status, 0, r.stderr)
+  assert.match(r.stdout, /面板尚未应答/)
+  assert.match(r.stdout, /手动启动/)
+})
+
+test('安装内的旧升级脚本先取最新版:拒绝网页,镜像失败再直连,保留渠道和目标版本(#557)', () => {
+  const dir = tmp()
+  const script = `set -eu; TMP_PARENT='${dir}'; REPO=timeflysoon/Open-Box
+CHANNEL=mirror; MIRROR_PREFIX=https://mirror.test; BUILTIN_MIRRORS=https://unused.test
+CHANNEL_OVERRIDE=mirror; CLI_MIRROR_PREFIX=https://mirror.test; ROLLBACK_MODE=0; EXPECT_VERSION=v0.1.318
+OPENBOX_UPDATE_RELOCATED=0
+info() { :; }; write_status() { :; }; die() { echo "$*"; exit 1; }
+detect_downloader() { :; }; ensure_tmp_parent() { :; }; resolve_channel() { :; }; cancel_requested() { return 1; }
+fetch_to_file_probe() {
+  echo "$1" >> '${dir}/urls'
+  case "$1" in https://mirror.test/*) echo '<html>error</html>' > "$2" ;;
+  *) printf '#!/bin/sh\\n# Open-Box 升级脚本\\nprintf "%%s\\n" "$@" > "${dir}/args"\\nprintf "%%s" "$OPENBOX_UPDATE_REFRESHED" > "${dir}/fresh"\\n' > "$2" ;; esac
+}
+${fn(update, 'refresh_update_script')}
+refresh_update_script`
+  const r = sh(script)
+  assert.equal(r.status, 0, r.stderr)
+  assert.deepEqual(fs.readFileSync(path.join(dir, 'args'), 'utf8').trim().split('\n'), ['--mirror', 'https://mirror.test', '--expect', 'v0.1.318'])
+  assert.equal(fs.readFileSync(path.join(dir, 'fresh'), 'utf8'), '1')
+  assert.equal(fs.readFileSync(path.join(dir, 'urls'), 'utf8').trim().split('\n').length, 2)
 })

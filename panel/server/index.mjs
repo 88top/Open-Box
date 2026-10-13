@@ -139,7 +139,8 @@ if ('serviceWorker' in navigator) {
 
 fs.mkdirSync(path.dirname(dbPath), { recursive: true })
 
-const db = new DatabaseSync(dbPath, { timeout: 5000 })
+// 升级部署进程和面板共用数据库,慢磁盘上写锁可能持续超过 5 秒(GitHub #557)。
+const db = new DatabaseSync(dbPath, { timeout: 60_000 })
 
 db.exec(`
   CREATE TABLE IF NOT EXISTS app_storage (

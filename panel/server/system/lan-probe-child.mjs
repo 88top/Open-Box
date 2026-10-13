@@ -123,7 +123,7 @@ const main = async () => {
       let head = ''
       let interim = false
       let headerBytes = 0
-      // 状态行读到之后继续收响应头到空行为止(仍受 16KB 上限约束),空行一到才报 response
+      // 状态行读到之后继续收响应头到空行为止,空行一到才报 response;超过 16KB 见 tooLarge
       let status = undefined
       const headerLines = []
       const fail = (error) => {
@@ -134,6 +134,13 @@ const main = async () => {
         stream.destroy()
         process.exit(0)
       }
+      // 响应头超过 16KB:状态行已经读到就按收到的状态码算(GitHub #583:gemini.google.com 的响应头约 26KB,一条安全策略头
+      // 就近 20KB,浏览器照常打开,这里以前报「访问失败」);连状态行都没读到才算失败。和内核诊断(api/route-test.mjs)一样
+      const tooLarge = () => {
+        if (status === undefined) { fail('response headers too large'); return }
+        complete(stream, status, pickHeaders(headerLines))
+        head = ''
+      }
       stream.on('data', (c) => {
         if (responded) return
         head += c.subarray(0, 16384).toString('latin1')
@@ -143,7 +150,7 @@ const main = async () => {
           const line = head.slice(0, i)
           head = head.slice(i + 2)
           headerBytes += i + 2
-          if (headerBytes > 16384) { fail('response headers too large'); return }
+          if (headerBytes > 16384) { tooLarge(); return }
           if (interim) { if (!line) interim = false; continue }
           if (status !== undefined) {
             if (!line) { complete(stream, status, pickHeaders(headerLines)); head = ''; break }
@@ -156,7 +163,7 @@ const main = async () => {
           if (code >= 100 && code < 200 && code !== 101) { interim = true; continue }
           status = code
         }
-        if (!responded && (head.length + headerBytes >= 16384 || c.length > 16384)) fail('response headers too large')
+        if (!responded && (head.length + headerBytes >= 16384 || c.length > 16384)) tooLarge()
       })
       stream.once('error', (err) => {
         fail(errorMessage(err))

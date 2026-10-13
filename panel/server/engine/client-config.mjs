@@ -64,6 +64,11 @@ export const toClientTemplate = (config, { selections = {}, flagState = {}, flag
 
   const route = out.route || {}
   route.auto_detect_interface = true
+  // 入站上面整段删了:只认路由器入站的规则(劫持模式下 dns-in 收到的一律当 DNS,GitHub #550)在手机上永远不命中,一起去掉
+  const routerInbounds = new Set((config.inbounds || []).map((i) => i && i.tag).filter(Boolean))
+  if (Array.isArray(route.rules)) {
+    route.rules = route.rules.filter((r) => !(r && Array.isArray(r.inbound) && r.inbound.length && !r.invert && r.inbound.every((t) => routerInbounds.has(t))))
+  }
   const flags = []
   const ruleSets = []
   for (const entry of route.rule_set || []) {

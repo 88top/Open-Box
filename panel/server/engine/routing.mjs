@@ -228,6 +228,11 @@ export const buildRoute = (routing, rulesetDir, options = {}) => {
   // hijack 模式靠 {protocol:'dns'} 一并接住 dns-in 收到的查询(sniff 对 direct 入站同样生效)。
   if (dnsMode === 'hijack') {
     rules.push({ protocol: 'dns', action: 'hijack-dns' })
+    // dns-in(以及名单外终端的 dns-in-direct)收到的连接一律当 DNS 处理,和另外两种模式一样(GitHub #550):只靠上面那条
+    // {protocol:'dns'} 的话,连到 :7853 却不发 DNS 的连接(空连接、探活)嗅探不出 DNS,会落到 ip_is_private → 直连,
+    // 直连再拨 <路由器 IP>:7853 又回到 dns-in——每一跳新开一个连接、永不收敛,一个核跑满。不用 reject:
+    // 真正的 DNS 查询来得慢、嗅探超时没认出来的,交给 hijack-dns 照样能解析
+    rules.push({ inbound: ['dns-in', ...(options.dnsDirectInbound ? [options.dnsDirectInbound] : [])], action: 'hijack-dns' })
   } else if (dnsMode === 'off') {
     rules.push({ inbound: ['dns-in'], action: 'hijack-dns' })
   } else if (dnsMode === 'dnsmasq') {

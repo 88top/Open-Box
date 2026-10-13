@@ -170,3 +170,52 @@ test('内存不够时不更新名单:可用内存低于门槛直接报人话,不
   assert.equal(low.calls.length, 0, '没起任何进程')
 })
 
+
+test('部署时名单下不来、本地又没有:只跳过那一份(记进 missing),其余照常;10 分钟内的部署不再等一遍超时,到点重试;点名更新照旧报错(GitHub #562 #565)', { skip: !available, timeout: 30000 }, async (t) => {
+  const dir = await fs.mkdtemp(path.join(os.tmpdir(), 'openbox-dns-filter-missing-'))
+  t.after(() => fs.rm(dir, { recursive: true, force: true }))
+  const profile = { dns: { filter: { enabled: true, allowDomains: [], lists: [
+    { id: 'good', name: 'Good', enabled: true, url: 'https://example.com/good.txt' },
+    { id: 'anti-ad', name: 'anti-AD', enabled: true, url: 'https://example.com/anti-ad.txt' },
+  ] } } }
+  const raw = new Map()
+  const store = { getProfile: () => profile, getRaw: (k) => raw.get(k), setRaw: (k, v) => raw.set(k, v) }
+  const ctx = createRealContext()
+  const paths = { dataDir: dir, singbox: binary }
+  let clock = 1_000_000
+  const now = () => clock
+  let antiAdUp = false
+  const fetched = []
+  const fetchImpl = async (url) => {
+    fetched.push(new URL(url).pathname)
+    if (url.includes('anti-ad') && !antiAdUp) throw new Error('下载超时（30 秒）')
+    return new Response(url.includes('anti-ad') ? '||ad.test^' : '||good.test^')
+  }
+  const first = await prepareDnsFilter({ store, ctx, paths, fetchImpl, now })
+  assert.deepEqual(first.missing, [{ id: 'anti-ad', name: 'anti-AD', error: '下载超时（30 秒）' }])
+  assert.deepEqual(first.sets.map((s) => s.tag), ['dns-filter-good-block'], '下得来的那份照常')
+  assert.equal(buildFilterConfig(profile, first).rules.length, 1, '配置生成不报「名单尚未准备好」')
+  assert.match(JSON.parse(raw.get('openbox/dns-filter-lists'))['anti-ad'].error, /下载超时/, '卡片上照常标红')
+
+  // 几分钟后又部署(重启内核):不再联网等超时,直接接着跳过
+  fetched.length = 0
+  clock += 5 * 60 * 1000
+  const again = await prepareDnsFilter({ store, ctx, paths, fetchImpl, now })
+  assert.deepEqual(fetched, [])
+  assert.deepEqual(again.missing.map((m) => m.id), ['anti-ad'])
+
+  // 点名更新这份:照旧报错给点按钮的人看;点名更新别的那份:不被它拖累
+  await assert.rejects(prepareDnsFilter({ store, ctx, paths, force: 'anti-ad', fetchImpl, now }), /anti-AD: 下载超时/)
+  const goodOnly = await prepareDnsFilter({ store, ctx, paths, force: 'good', fetchImpl, now })
+  assert.deepEqual(goodOnly.missing.map((m) => m.id), ['anti-ad'])
+
+  // 过了 10 分钟、网络也好了:部署时重试,补上
+  antiAdUp = true
+  fetched.length = 0
+  clock += 11 * 60 * 1000
+  const healed = await prepareDnsFilter({ store, ctx, paths, fetchImpl, now })
+  assert.deepEqual(fetched, ['/anti-ad.txt'], '只重下缺的那份,有缓存的不联网')
+  assert.equal(healed.missing, undefined)
+  assert.deepEqual(healed.sets.map((s) => s.tag).sort(), ['dns-filter-anti-ad-block', 'dns-filter-good-block'])
+  assert.equal(JSON.parse(raw.get('openbox/dns-filter-lists'))['anti-ad'].error, '')
+})

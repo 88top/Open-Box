@@ -10,10 +10,13 @@ import express from 'express'
 import fs from 'node:fs'
 import { createRouteFetcher } from './route-fetch.mjs'
 
-export const CHANNEL_VIDEOS_URL = 'https://www.youtube.com/@Ange-Digital-Life/videos'
+// hl=zh-CN:YouTube 按访问者地区把标题自动翻译(还会截断),英国那台路由器拿到的全是英文、截断后有的不再带 Open-Box(用户 2026-10-13
+// 发现少了一个);指定中文界面就回原标题。sing-box tools fetch 带不了 Accept-Language 头,只能用参数
+export const CHANNEL_VIDEOS_URL = 'https://www.youtube.com/@Ange-Digital-Life/videos?hl=zh-CN'
 export const TUTORIAL_TITLE_RE = /open-?box/i
-// 弹窗打开时,上次查过超过这么久就再查一次(面板那边判);手动连点也至少隔这么久才真去查
-export const TUTORIAL_STALE_MS = 6 * 60 * 60 * 1000
+// 弹窗每次打开都顺手再查一次(面板那边按 updatedAt + staleAfterMs 判,0 = 每次都查;用户 2026-10-12 发了新视频打开弹窗没出来——
+// 以前是 6 小时内查过就不查);连着开关弹窗也至少隔这么久才真去查
+export const TUTORIAL_STALE_MS = 0
 export const TUTORIAL_REFRESH_MIN_MS = 60 * 1000
 // 频道页 1.3 MB 左右(大半是脚本),取的时候放宽输出上限和时限
 const PAGE_MAX_BUFFER = 8 * 1024 * 1024
@@ -61,12 +64,17 @@ export const parseChannelVideos = (html) => {
   return out
 }
 
-// 把这次页面上的(新的在前、所有标题)并进已知列表(老的在前):页面上没有的老条目原样留在前面;页面上标题带 Open-Box /
-// openbox 的按发布先后接在后面(页面上有、标题不再带的就拿掉了)
+// 把这次页面上的(新的在前、所有标题)并进已知列表(老的在前):页面上没有的老条目原样留在前面;页面上的按页面顺序(发布先后)
+// 接在后面——标题带 Open-Box / openbox 的用页面上的标题;已知的、但这次页面标题不带的不删,留原来的标题
+// (多半是 YouTube 按地区自动翻译、截断了;以前直接删,英国那台少了一个视频)
 export const mergeTutorialVideos = (known, page) => {
-  const onPage = new Set(page.map((v) => v.id))
-  const matched = page.filter((v) => TUTORIAL_TITLE_RE.test(v.title)).reverse()
-  return [...known.filter((v) => !onPage.has(v.id)), ...matched]
+  const pageIndex = new Map(page.map((v, i) => [v.id, i]))
+  const matched = new Map(page.filter((v) => TUTORIAL_TITLE_RE.test(v.title)).map((v) => [v.id, v]))
+  const knownById = new Map(known.map((v) => [v.id, v]))
+  const onPage = [...new Set([...known.filter((v) => pageIndex.has(v.id)).map((v) => v.id), ...matched.keys()])]
+  // 页面是新的在前:下标大的更老,排前面
+  onPage.sort((a, b) => pageIndex.get(b) - pageIndex.get(a))
+  return [...known.filter((v) => !pageIndex.has(v.id)), ...onPage.map((id) => matched.get(id) || knownById.get(id))]
 }
 
 export const registerTutorialVideoRoutes = (app, {

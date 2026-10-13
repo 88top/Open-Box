@@ -5,6 +5,13 @@ import { registerRouteTestRoutes, decideDnsServer, isFakeIp } from './route-test
 import { createMockContext } from '../system/context.mjs'
 import { createPaths } from '../system/paths.mjs'
 
+// 内核诊断的解析走 resolveDns(向内核 DNS 入站真查一次);用例里沿用各自 fetchImpl 对 /dns/query 的模拟数据
+const dnsVia = (fetchImpl) => async (name, type) => {
+  const r = await fetchImpl(`http://127.0.0.1:9095/dns/query?name=${encodeURIComponent(name)}&type=${type}`)
+  const body = await r.json()
+  return ((body && body.Answer) || []).filter((a) => a && a.data).map((a) => ({ address: a.data, ttl: a.TTL }))
+}
+
 const paths = createPaths('/opt/open-box')
 const config = {
   dns: {
@@ -64,7 +71,7 @@ test('POST /route-test:内核解析 + 真实访问 + 在连接表里找到这条
   const probeCalls = []
   const probe = async (host, opts) => { probeCalls.push({ host, ...opts }); return { ok: true, status: opts.port === 443 ? 200 : 301, ms: 7 } }
   const app = express()
-  registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe })
+  registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
@@ -78,7 +85,9 @@ test('POST /route-test:内核解析 + 真实访问 + 在连接表里找到这条
     assert.deepEqual(body.exit.chains, ['中国', '直连'])
     assert.equal(body.exit.rule, 'RuleSet(geosite-cn)')
     // 探测像终端一样按解析出来的 IP 去连,SNI / Host 仍是域名;链路末尾是内置直连,不算走节点
-    assert.deepEqual(probeCalls, [{ host: 'www.baidu.com', port: 443, secure: true, connectTo: '39.156.66.10' }])
+    // 请求方式和模拟终端同一套,默认 GET
+    assert.deepEqual(probeCalls, [{ host: 'www.baidu.com', port: 443, secure: true, connectTo: '39.156.66.10', method: 'GET' }])
+    assert.equal(body.exit.method, 'GET')
     assert.equal(body.exit.connectTo, '39.156.66.10')
     assert.equal(body.exit.viaProxy, false)
   } finally {
@@ -103,7 +112,7 @@ test('POST /route-test:访问失败也报出站链路——请求挂着的时候
     }
     const probe = () => new Promise((resolve) => setTimeout(() => { probeDone = true; resolve({ ok: false, error: 'connection closed', ms: 5041 }) }, 250))
     const app = express()
-    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe })
+    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe })
     const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
@@ -158,7 +167,7 @@ test('DNS 规则过期:内核里的选择和配置里定死的判断对不上就
       throw new Error('unexpected fetch ' + url)
     }
     const app = express()
-    registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: false, error: 'timeout', ms: 1 }) })
+    registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe: async () => ({ ok: false, error: 'timeout', ms: 1 }) })
     const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
@@ -210,7 +219,7 @@ test('fake-ip:代理侧解析回 198.19.x.x 就标出是 detour 此刻落到的�
       throw new Error('unexpected fetch ' + url)
     }
     const app = express()
-    registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 1 }) })
+    registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe: async () => ({ ok: true, status: 200, ms: 1 }) })
     const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
@@ -251,7 +260,7 @@ test('POST /route-test:每次查询都先清内核 DNS 缓存,而且清在解析
       throw new Error('unexpected fetch ' + url)
     }
     const app = express()
-    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 3 }) })
+    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe: async () => ({ ok: true, status: 200, ms: 3 }) })
     const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
@@ -292,7 +301,7 @@ test('档案开了 IPv6:再查一次 AAAA,单独放 answers6;没开就没有这�
   const run = async (ipv6) => {
     asked.length = 0
     const app = express()
-    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6 }) }, ctx, paths, fetchImpl, probe })
+    registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6 }) }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe })
     const server = app.listen(0, '127.0.0.1')
     await new Promise((r) => server.once('listening', r))
     try {
@@ -351,7 +360,7 @@ test('S4:指定终端来源时,响应明确标出 DNS 判定是按终端预测�
   const probes = []
   const probe = async (host, opts) => { probes.push({ host, ...opts }); return { ok: true, status: 200, ms: 1 } }
   const app = express()
-  registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6: false }) }, ctx, paths, fetchImpl, probe })
+  registerRouteTestRoutes(app, { store: { getClashSecret: () => 's', getProfile: () => ({ ipv6: false }) }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
@@ -406,7 +415,7 @@ test('decideDnsServer:内核自己的 fakeip 规则先命中时记成 fakeIpRule
     throw new Error('unexpected fetch ' + url)
   }
   const app = express()
-  registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe: async () => ({ ok: true, status: 200, ms: 1 }) })
+  registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe: async () => ({ ok: true, status: 200, ms: 1 }) })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
@@ -470,7 +479,7 @@ test('内核诊断:探测拿到 403 + cf-mitigated: challenge 时 exit.challenge
   }
   const probe = async () => ({ ok: true, status: 403, ms: 9, headers: { server: 'cloudflare', 'cf-mitigated': 'challenge' } })
   const app = express()
-  registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, probe })
+  registerRouteTestRoutes(app, { store, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe })
   const server = app.listen(0, '127.0.0.1')
   await new Promise((r) => server.once('listening', r))
   try {
@@ -480,4 +489,105 @@ test('内核诊断:探测拿到 403 + cf-mitigated: challenge 时 exit.challenge
     assert.equal(body.exit.status, 403)
     assert.equal(body.exit.challenge, 'cloudflare')
   } finally { await new Promise((r) => server.close(r)) }
+})
+
+test('内核诊断的解析向内核 DNS 入站真查一次(kernelDnsQuery):带 TTL;NXDOMAIN / 没有记录回空;服务器不答报错', async () => {
+  const { kernelDnsQuery } = await import('./route-test.mjs')
+  const { buildResponse, parseQuery } = await import('../system/dns-rewrite-server.mjs')
+  const dgram = await import('node:dgram')
+  const server = dgram.createSocket('udp4')
+  server.on('message', (msg, peer) => {
+    const q = parseQuery(msg)
+    const reply = q.qname.startsWith('nx.')
+      ? buildResponse(q, { rcode: 3 })
+      : buildResponse(q, { answers: q.qtype === 1 ? [{ name: q.qname, type: 1, ttl: 600, data: '198.19.0.9' }] : [] })
+    server.send(reply, peer.port, peer.address)
+  })
+  await new Promise((r) => server.bind(0, '127.0.0.1', r))
+  try {
+    const port = server.address().port
+    assert.deepEqual(await kernelDnsQuery('www.google.com', 'A', { port }), [{ address: '198.19.0.9', ttl: 600 }])
+    assert.deepEqual(await kernelDnsQuery('www.google.com', 'AAAA', { port }), [])
+    assert.deepEqual(await kernelDnsQuery('nx.example.com', 'A', { port }), [])
+  } finally {
+    server.close()
+  }
+  const silent = dgram.createSocket('udp4')
+  await new Promise((r) => silent.bind(0, '127.0.0.1', r))
+  try {
+    await assert.rejects(kernelDnsQuery('www.google.com', 'A', { port: silent.address().port, timeoutMs: 300 }))
+  } finally {
+    silent.close()
+  }
+})
+
+test('内核诊断的请求方式和模拟终端一样:TCP / TLS 的地址写成 tcp:// tls://,TLS 一定加密、TCP 不加密;不认识的方式 400', async () => {
+  const ctx = createMockContext({ files: { [paths.configPath]: JSON.stringify(config), [paths.singbox]: 'x', [`${paths.geoDir}/geosite-openai.srs`]: 'x' } })
+  const fetchImpl = async (url) => {
+    if (url.includes('/dns/query')) return { ok: true, status: 200, json: async () => ({ Answer: [{ data: '39.156.66.10' }] }) }
+    if (url.includes('/connections')) return { ok: true, status: 200, json: async () => ({ connections: [] }) }
+    if (url.includes('/cache/dns/flush')) return { ok: true, status: 204, json: async () => ({}) }
+    throw new Error('unexpected fetch ' + url)
+  }
+  const probes = []
+  const app = express()
+  registerRouteTestRoutes(app, { store: { getClashSecret: () => 's' }, ctx, paths, fetchImpl, resolveDns: dnsVia(fetchImpl), probe: async (host, opts) => { probes.push(opts); return { ok: true, ms: 1 } } })
+  const server = app.listen(0, '127.0.0.1')
+  await new Promise((r) => server.once('listening', r))
+  const post = (body) => fetch(`http://127.0.0.1:${server.address().port}/api/openbox/route-test`, { method: 'POST', headers: { 'content-type': 'application/json' }, body: JSON.stringify(body) })
+  try {
+    const tlsOn80 = await (await post({ target: 'www.baidu.com', port: 80, method: 'tls' })).json()
+    assert.equal(tlsOn80.exit.url, 'tls://www.baidu.com:80')
+    assert.equal(probes.at(-1).secure, true)
+    const tcp = await (await post({ target: 'www.baidu.com', method: 'TCP' })).json()
+    assert.equal(tcp.exit.url, 'tcp://www.baidu.com:443')
+    assert.equal(probes.at(-1).secure, false)
+    assert.equal(probes.at(-1).method, 'TCP')
+    assert.equal((await post({ target: 'www.baidu.com', method: 'PUT' })).status, 400)
+  } finally {
+    await new Promise((r) => server.close(r))
+  }
+})
+
+test('probeViaKernel:经回环入站 CONNECT 后,TCP 接下就算通(不发请求);GET / HEAD 按方式发请求、读状态码', async () => {
+  const { probeViaKernel } = await import('./route-test.mjs')
+  const net = await import('node:net')
+  const seen = []
+  const proxy = net.createServer((s) => {
+    s.on('error', () => {})
+    let buf = ''
+    let tunneled = false
+    s.on('data', (c) => {
+      buf += c.toString('latin1')
+      if (!tunneled) {
+        if (!buf.includes('\r\n\r\n')) return
+        tunneled = true
+        buf = ''
+        s.write('HTTP/1.1 200 Connection established\r\n\r\n')
+        return
+      }
+      if (!buf.includes('\r\n\r\n')) return
+      seen.push(buf.split('\r\n')[0])
+      buf = ''
+      s.write('HTTP/1.1 204 No Content\r\n\r\n')
+    })
+  })
+  proxy.listen(0, '127.0.0.1')
+  await new Promise((r) => proxy.once('listening', r))
+  const proxyPort = proxy.address().port
+  try {
+    const tcp = await probeViaKernel('www.baidu.com', { port: 80, secure: false, proxyPort, method: 'TCP' })
+    assert.equal(tcp.ok, true)
+    assert.equal(tcp.status, undefined)
+    tcp.close()
+    const get = await probeViaKernel('www.baidu.com', { port: 80, secure: false, proxyPort, method: 'GET' })
+    assert.equal(get.status, 204)
+    get.close()
+    const head = await probeViaKernel('www.baidu.com', { port: 80, secure: false, proxyPort, method: 'HEAD' })
+    assert.equal(head.status, 204)
+    head.close()
+    assert.deepEqual(seen, ['GET / HTTP/1.1', 'HEAD / HTTP/1.1'], 'TCP 不发请求')
+  } finally {
+    proxy.close()
+  }
 })

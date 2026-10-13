@@ -76,19 +76,28 @@ export const memAvailableMb = async (ctx) => {
   }
 }
 
+// 部署时名单下不来、本地又没有(第一次开、换了链接):不让整次部署失败——以前内核就因为这个起不来(GitHub #562 #565)。
+// 这份先不过滤、记进产物的 missing(启动后弹黄色提示),其余名单照常;之后的部署隔这么久才再试一次(每次部署都等满
+// 下载超时太久),「更新名单」按钮随时可以重试
+export const MISSING_RETRY_MS = 10 * 60 * 1000
+
 export const prepareDnsFilter = async ({ store, ctx, paths, force = false, fetchImpl = guardedFetch, now = Date.now }) => {
   const settings = filterSettings(store.getProfile())
   if (!settings.enabled && !force) return null
   const error = validateDnsFilter(settings)
   if (error) throw new Error(error)
   const previous = readFilterArtifact(store)
+  const state = readFilterListState(store)
+  const retryDue = (m) => !(state[m.id]?.failedAt && now() - Number(state[m.id].failedAt) < MISSING_RETRY_MS)
+  const previousOk = previous?.key === filterKey(settings) && previous.hashes && (await Promise.all(previous.sets.map((s) => ctx.exists(s.path)))).every(Boolean)
   // 老版本的产物(按内容起名、没有 hashes)在部署时顺手重编成固定名字:用本地缓存的名单,不联网。以后名单更新就只换文件
-  if (!force && previous?.key === filterKey(settings) && previous.hashes && (await Promise.all(previous.sets.map((s) => ctx.exists(s.path)))).every(Boolean)) return previous
+  if (!force && previousOk && !(previous.missing || []).some(retryDue)) return previous
   const available = await memAvailableMb(ctx)
   if (available !== null && available < MIN_AVAILABLE_MB) {
+    // 部署时只是到点重试没下下来的名单:内存不够就接着用现有的
+    if (!force && previousOk) return previous
     throw new Error(`可用内存只有 ${Math.round(available)} MB,更新过滤名单要临时占用约 ${MIN_AVAILABLE_MB} MB（内核编译名单）,这次没有更新;等内存空一些再试,现有名单照常生效`)
   }
-  const state = readFilterListState(store)
   const dir = `${paths.dataDir}/dns-filter`
   await ctx.mkdirp(dir)
   // 上一份各集合的内容摘要:内容没变、文件还在就不重编
@@ -133,16 +142,20 @@ export const prepareDnsFilter = async ({ store, ctx, paths, force = false, fetch
     return compiled
   }
   const parsed = []
+  const missing = []
   const forceAll = force === true
   const forceListId = typeof force === 'string' ? force : ''
   let total = 0
   for (const list of settings.lists.filter((l) => l.enabled)) {
     let entry = state[list.id]
     let body
+    const refresh = forceAll || list.id === forceListId
     try {
-      const refresh = forceAll || list.id === forceListId
-      if (!refresh && entry?.url === list.url && await ctx.exists(entry.path)) body = await ctx.readFile(entry.path)
-      else body = (await fetchRuleList(fetchImpl, list.url)).toString('utf8')
+      if (!refresh && entry?.url === list.url && entry.path && await ctx.exists(entry.path)) body = await ctx.readFile(entry.path)
+      else if (!refresh && entry?.failedUrl === list.url && !retryDue({ id: list.id })) {
+        missing.push({ id: list.id, name: list.name, error: entry.error || '' })
+        continue
+      } else body = (await fetchRuleList(fetchImpl, list.url)).toString('utf8')
       const result = await parseListInWorker(body)
       if (!result.count) throw new Error('名单没有可用的 DNS 规则（不接受网页或空正文）')
       total += result.count
@@ -157,16 +170,20 @@ export const prepareDnsFilter = async ({ store, ctx, paths, force = false, fetch
       parsed.push({ count: result.count, compiled })
     } catch (error) {
       const message = error instanceof Error ? error.message : String(error)
-      state[list.id] = { ...entry, error: message }
+      state[list.id] = { ...entry, error: message, failedAt: now(), failedUrl: list.url }
       store.setRaw(FILTER_LIST_STATE, JSON.stringify(state))
-      // Keep the last known good data. First enable with no valid list fails before deployment.
-      if (entry?.url !== list.url || !entry.path || !(await ctx.exists(entry.path))) throw new Error(`${list.name}: ${message}`)
+      // Keep the last known good data. 本地也没有的:点名更新的(「更新名单」按钮、定时更新)报错给人看;部署时的先跳过(见 MISSING_RETRY_MS)
+      if (entry?.url !== list.url || !entry.path || !(await ctx.exists(entry.path))) {
+        if (refresh) throw new Error(`${list.name}: ${message}`)
+        missing.push({ id: list.id, name: list.name, error: message })
+        continue
+      }
       const result = await parseListInWorker(await ctx.readFile(entry.path))
       parsed.push({ count: result.count, compiled: await compileList(list, result) })
     }
   }
   if (parsed.reduce((sum, p) => sum + p.count, 0) > 400000) throw new Error('过滤规则总数超过 40 万条,请减少名单')
-  const artifact = { key: filterKey(settings), sets: [], blocks: [], allow: [], allowImportant: [], userAllow: [], hashes, builtAt: now() }
+  const artifact = { key: filterKey(settings), sets: [], blocks: [], allow: [], allowImportant: [], userAllow: [], hashes, builtAt: now(), ...(missing.length ? { missing } : {}) }
   for (const { compiled } of parsed) for (const kind of ['sets', 'blocks', 'allow', 'allowImportant']) artifact[kind].push(...compiled[kind])
   if (settings.allowDomains.length) {
     const userAllow = await compile('user-allow', JSON.stringify({ version: 4, rules: settings.allowDomains.map(allowDomainCondition) }), false)

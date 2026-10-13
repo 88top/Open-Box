@@ -106,20 +106,29 @@ export const bypassSources = (list) => collectSources(list, 'bypass')
 // 内核首包预判照规则表把它们在系统入口放行(engine/routing.mjs 的 preMatchBypassRules)
 export const isDirectClientRoute = (cr, directTag) => Boolean(cr) && cr.bypass !== true && Boolean(directTag) && cr.outbound === directTag
 
+// 终端分流里出口是节点 / 节点组的终端(不是直连、拒绝,也不是「不进内核」)
+export const isProxyClientRoute = (cr, directTag, blockTag) =>
+  Boolean(cr) && cr.bypass !== true && Boolean(cr.outbound) && cr.outbound !== directTag && cr.outbound !== blockTag
+
 // 哪些终端的 DNS 要由内核按终端答:在入口把它们的查询转给内核的 DNS 入站(system/entry-bypass.mjs 的 terminal_dns 链),
 // 内核才看得到是哪台终端在查,按它自己的规则给答案(engine/dns.mjs)。劫持模式下局域网的查询本来就进内核,只有「不进内核」
 // 的终端例外:它们的包在入口打了标记,DNS 劫持也跳过了,查询落到 dnsmasq,再由 dnsmasq 转给内核时已经分不出是谁。
-// dnsmasq 转发模式下所有终端都是这样。要按终端答的只有两类,都是整台不该进内核、答案里就不能有 FakeIP 占位地址的
-// (占位地址只有内核认得,拿着它的连接只能进内核):
+// dnsmasq 转发模式下所有终端都是这样。要按终端答的有三类:
 //   · 「不进内核」的终端;
 //   · 出口是「直连」、会在首包预判时放行的终端(「直连不进内核」开着、有 nft 重定向)。劫持模式下它们的查询内核本来就接得到。
-// 走代理 / 拒绝的终端整台进内核,dnsmasq 模式下解析仍按域名规则答(老样子)。没开分流解析(dns.split)时所有查询都是直连
-// 解析、没有占位地址,不用转
-export const terminalDnsRedirected = (cr, { dnsMode = 'hijack', autoRedirect = false, directBypass = true, splitDns = true, directTag = '' } = {}) => {
+//     这两类都是整台不该进内核、答案里就不能有 FakeIP 占位地址的(占位地址只有内核认得,拿着它的连接只能进内核);
+//   · dnsmasq 模式下出口是节点 / 节点组的终端(GitHub #574,用户 2026-10-13「做吧」):整台进内核,解析也跟着它的出口——开着
+//     FakeIP 时它查的域名一律给占位地址,连接带着域名交给它的节点去解析,DNS 和流量是同一个节点。以前按全局规则答:全局判直连的
+//     域名在本地解析出真实地址,再经节点去连。没开 FakeIP 时交给代理侧解析器(线路由目标分流定,不是每台终端一个)。
+// 拒绝的终端整台进内核,dnsmasq 模式下解析仍按域名规则答(老样子)。没开分流解析(dns.split)时所有查询都是直连解析、没有
+// 占位地址,不用转
+export const terminalDnsRedirected = (cr, { dnsMode = 'hijack', autoRedirect = false, directBypass = true, splitDns = true, directTag = '', blockTag = '' } = {}) => {
   if (!cr || !autoRedirect || !splitDns) return false
   if (dnsMode !== 'dnsmasq' && dnsMode !== 'hijack') return false
   if (cr.bypass === true) return true
-  return dnsMode === 'dnsmasq' && directBypass !== false && isDirectClientRoute(cr, directTag)
+  if (dnsMode !== 'dnsmasq') return false
+  if (isProxyClientRoute(cr, directTag, blockTag)) return true
+  return directBypass !== false && isDirectClientRoute(cr, directTag)
 }
 
 // 「不进内核」的终端只转它发给路由器自己的查询(入口规则带 fib daddr type local):发给路由器的落到 dnsmasq、再转给内核时

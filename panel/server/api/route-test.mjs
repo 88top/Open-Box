@@ -1,9 +1,10 @@
 import { FLIP_FALLBACK_TAG, flattenFlipRule, flipFlagOfRule } from '../engine/flip.mjs'
 import { readFlipState } from '../system/flip-files.mjs'
 import express from 'express'
+import { promises as dnsPromises } from 'node:dns'
 import net from 'node:net'
 import tls from 'node:tls'
-import { PANEL_INBOUND_PORT, PANEL_INBOUND_TAG } from '../engine/config.mjs'
+import { DNS_INBOUND_PORT, PANEL_INBOUND_PORT, PANEL_INBOUND_TAG } from '../engine/config.mjs'
 import { CLASH_API_BASE, hasDestinationCondition, matchLocalConditions, matchRuleSetsByDomain } from './penetration.mjs'
 import { cidrContains } from '../system/local-subnets.mjs'
 import { fetchSelections } from './deploy-runner.mjs'
@@ -12,6 +13,7 @@ import { detectChallenge, parseHeaderBlock, pickProbeHeaders } from '../system/h
 import { builtinTags } from '../engine/user-groups.mjs'
 import { connectionOwner } from '../engine/rule-owner.mjs'
 import { normalizeRouting, stripNoDomainGuardText } from '../engine/routing-model.mjs'
+import { normalizeProbeMethod } from '../system/probe-method.mjs'
 import { DNS_REWRITE_TAG, matchRewrite, normalizeDnsRewrite } from '../engine/dns-rewrite.mjs'
 import { isProxyResolverTag } from '../engine/dns.mjs'
 import { macForIp } from './traffic.mjs'
@@ -19,7 +21,8 @@ import { macForIp } from './traffic.mjs'
 // 「真实路由」:不只按规则推,而是真的走一遍——
 //   1. DNS 用哪台服务器:按生成配置里 dns.rules 的顺序判(规则集先用进程内索引比,答不了的才用内核 rule-set match,
 //      域名条件本地比),得到 dns-direct(直连解析)还是某个带 detour 的代理 DNS;
-//   2. 解析结果:问内核自己的 DNS(clash_api /dns/query),拿到的就是内核会用的答案;
+//   2. 解析结果:向内核的 DNS 入站(127.0.0.1:7853)发一次真正的查询,和终端(dnsmasq 转过来的)走同一个入口,拿到的
+//      就是终端会拿到的答案(见 kernelDnsQuery);
 //   3. 实际出口:面板进程在路由器上真发一个 HTTPS 请求(会经过 tun 进内核),然后到
 //      clash_api /connections 里找这条连接,读它实际走的链路和命中的规则;顺带记耗时。
 const TARGET_PATTERN = /^[A-Za-z0-9._:-]+$/
@@ -141,14 +144,33 @@ export const decideDnsServer = async (ctx, paths, config, target, { sourceIp = '
 
 const clashHeaders = (secret) => (secret ? { Authorization: `Bearer ${secret}` } : {})
 
-// 经内核的回环 mixed 入站发一次真实请求:CONNECT 目标:port → (443 时再套 TLS)→ HEAD /。
+// 内核诊断的解析:向内核的 DNS 入站发一次真正的查询(UDP),和终端(dnsmasq 转过来的)走同一个入口。以前问的是
+// clash_api 的 /dns/query——那条查询不经过任何入站、没有网络类型,热切换开关那几份规则集(开着时内容是
+// network: tcp / udp)一律不命中,走代理的域名全落到最后的直连 DNS:开着 FakeIP 也拿到直连上游的答案(国内多半是
+// 污染过的地址;开发路由器的上游本身也发 198.19 的占位地址,连过去被内核换成别的域名),探测连过去自然失败。
+// 回 [{ address, ttl }];没有记录(NXDOMAIN / 没有这类记录)回空数组,别的错误抛出
+export const kernelDnsQuery = async (name, type = 'A', { port = DNS_INBOUND_PORT, timeoutMs = 5000 } = {}) => {
+  const resolver = new dnsPromises.Resolver({ timeout: timeoutMs, tries: 1 })
+  resolver.setServers([`127.0.0.1:${port}`])
+  try {
+    const records = type === 'AAAA' ? await resolver.resolve6(name, { ttl: true }) : await resolver.resolve4(name, { ttl: true })
+    return records.map((r) => ({ address: r.address, ttl: r.ttl }))
+  } catch (err) {
+    if (err && (err.code === 'ENODATA' || err.code === 'ENOTFOUND')) return []
+    throw err
+  }
+}
+
+// 经内核的回环 mixed 入站发一次真实请求:CONNECT 目标:port → (加密时再套 TLS)→ GET / HEAD /。
+// method 和模拟终端同一套(system/probe-method.mjs):TCP = CONNECT 被内核接下就算通(和终端的 TCP 一样只到内核为止);
+// TLS = 握手完成;GET / HEAD = 读到状态码。
 // 走这条路请求才会像客户端流量一样过内核的分流规则,连接表里也就能找到它。
 // connectTo:终端都是先解析再按 IP 去连的,探测也一样——CONNECT 的目标写解析出来的 IP,
 // TLS 的 SNI / HTTP 的 Host 仍是域名,内核靠嗅探拿到域名去匹配规则(和 tun 里的终端流量一样)。
 // 这一点决定了节点那头拿到的是 IP 还是域名:内核不改写目标(sniff 不带 override_destination),
 // 节点拿到的就是这个 IP,按它直接连,不会再解析一次;拿到域名才会在节点那边再解析。
 // 只读响应首行,拿到状态码就断开。
-export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPort = PANEL_INBOUND_PORT, timeoutMs = 10000, connectTo = '' } = {}) =>
+export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPort = PANEL_INBOUND_PORT, timeoutMs = 10000, connectTo = '', method = 'HEAD' } = {}) =>
   new Promise((resolve) => {
     const t0 = Date.now()
     let done = false
@@ -172,10 +194,18 @@ export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPo
       socket.removeListener('data', onConnectData)
       const line = buf.slice(0, buf.indexOf('\r\n'))
       if (!/^HTTP\/1\.[01] 200/.test(line)) { clearTimeout(timer); finish({ ok: false, error: `CONNECT: ${line}` }); socket.destroy(); return }
+      // 先不断开(调用方要趁连接还在去内核连接表里找它,找完再 close());兜底 15 秒后自动断
+      const holdOpen = (stream) => {
+        clearTimeout(timer)
+        const close = () => { try { stream.destroy() } catch { /* ignore */ } try { socket.destroy() } catch { /* ignore */ } }
+        setTimeout(close, 15000).unref?.()
+        return close
+      }
+      if (method === 'TCP') { finish({ ok: true, close: holdOpen(socket) }); return }
       // keep-alive:带 Connection: close 的话对端一答完就关,内核随即把它从连接表里删掉,
       // 后面就查不到了。连接由调用方 close() 收尾。
       const hostHeader = net.isIPv6(host) ? `[${host}]` : host
-      const request = `HEAD / HTTP/1.1\r\nHost: ${hostHeader}\r\nUser-Agent: open-box-route-test\r\nConnection: keep-alive\r\n\r\n`
+      const request = `${method === 'GET' ? 'GET' : 'HEAD'} / HTTP/1.1\r\nHost: ${hostHeader}\r\nUser-Agent: open-box-route-test\r\nConnection: keep-alive\r\n\r\n`
       const readStatus = (stream) => {
         let head = ''
         let done = false
@@ -190,11 +220,7 @@ export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPo
           done = true
           const m = /^HTTP\/\d(?:\.\d)? (\d{3})/.exec(head.slice(0, i))
           const headers = end === -1 ? {} : pickProbeHeaders(parseHeaderBlock(head.slice(i + 2, end)))
-          clearTimeout(timer)
-          // 先不断开:调用方要趁连接还在的时候去内核连接表里找它,找完再 close()。
-          // 兜底 15 秒后自动断,免得调用方忘了。
-          const close = () => { try { stream.destroy() } catch { /* ignore */ } try { socket.destroy() } catch { /* ignore */ } }
-          setTimeout(close, 15000).unref?.()
+          const close = holdOpen(stream)
           finish(m ? { ok: true, status: Number(m[1]), headers, close } : { ok: false, error: `bad response: ${head.slice(0, i)}`, close })
         })
         stream.once('error', (err) => { clearTimeout(timer); finish({ ok: false, error: err.message }) })
@@ -202,7 +228,10 @@ export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPo
       }
       if (secure) {
         // SNI 只能是域名:IP 字面量不能进 SNI(RFC 6066),Node 也会拒
-        const secureStream = tls.connect({ socket, ...(isIp(host) ? {} : { servername: host }), rejectUnauthorized: false }, () => secureStream.write(request))
+        const secureStream = tls.connect({ socket, ...(isIp(host) ? {} : { servername: host }), rejectUnauthorized: false }, () => {
+          if (method === 'TLS') finish({ ok: true, close: holdOpen(secureStream) })
+          else secureStream.write(request)
+        })
         readStatus(secureStream)
       } else {
         socket.write(request)
@@ -212,13 +241,16 @@ export const probeViaKernel = (host, { port = 443, secure = port !== 80, proxyPo
     socket.on('data', onConnectData)
   })
 
-export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = globalThis.fetch, probe = probeViaKernel } = {}) => {
+export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = globalThis.fetch, probe = probeViaKernel, resolveDns = kernelDnsQuery } = {}) => {
   const router = express.Router({ caseSensitive: true })
   router.use(express.json({ limit: '16kb' }))
 
   router.post('/route-test', async (req, res) => {
     const target = String((req.body || {}).target || '').trim().toLowerCase()
     if (!isValidTarget(target)) return res.status(400).json({ message: 'target must be a domain or IP' })
+    let method
+    try { method = normalizeProbeMethod((req.body || {}).method) }
+    catch (err) { return res.status(400).json({ message: errorMessage(err) }) }
     let config
     try {
       config = JSON.parse(await ctx.readFile(paths.configPath))
@@ -238,7 +270,7 @@ export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = gl
         const rewrite = typeof store?.getProfile === 'function' ? normalizeDnsRewrite(store.getProfile().dns) : { enabled: true, rules: [] }
         const sourceMac = sourceIp ? await macForIp(ctx, paths, sourceIp) : ''
         out.dns = await decideDnsServer(ctx, paths, config, target, { sourceIp, sourceMac, rewriteRules: rewrite.enabled ? rewrite.rules : [] })
-        // 下面的解析和访问都是面板自己发起的:内核的 DNS 查询接口(clash API /dns/query)不带原终端来源,
+        // 下面的解析和访问都是面板自己发起的:向内核 DNS 入站的查询来源是本机(不是原终端),
         // 回环 mixed 入站的探测来源也是本机——指定终端的来源规则在这两步里没有生效,不能把它们画成
         // "该终端的实测"(复审 S4)
         if (sourceIp) out.context = { sourceIp, predictedFor: 'terminal', probeOrigin: 'panel', sourceVerified: false }
@@ -295,26 +327,22 @@ export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = gl
       await flushDnsCache(fetchImpl, secret)
       const t0 = Date.now()
       try {
-        const r = await fetchWithTimeout(fetchImpl, `${CLASH_API_BASE}/dns/query?name=${encodeURIComponent(target)}&type=A`, { headers: clashHeaders(secret) }, 8000)
-        const body = await r.json().catch(() => null)
-        const records = ((body && body.Answer) || []).filter((a) => a && a.data)
-        const answers = records.map((a) => a.data)
+        const records = (await resolveDns(target, 'A')).filter((a) => a && a.address)
+        const answers = records.map((a) => String(a.address))
         const ms = Date.now() - t0
-        out.resolve = { ok: r.ok, status: r.status, answers, ms }
-        const ttl = records.map((a) => Number(a.TTL)).find((n) => Number.isFinite(n))
+        out.resolve = { ok: true, answers, ms }
+        const ttl = records.map((a) => Number(a.ttl)).find((n) => Number.isFinite(n))
         if (ttl !== undefined) out.resolve.ttl = ttl
         // 档案开了 IPv6 才问 AAAA:关着时内核 strategy=ipv4_only,问了也是空。分开报,A / AAAA
         // 各自验证(审核 C1:以前只查 A,IPv6 路径完全没看)
         const profile = store.getProfile ? store.getProfile() : null
         if (profile && profile.ipv6) {
           try {
-            const r6 = await fetchWithTimeout(fetchImpl, `${CLASH_API_BASE}/dns/query?name=${encodeURIComponent(target)}&type=AAAA`, { headers: clashHeaders(secret) }, 8000)
-            const body6 = await r6.json().catch(() => null)
-            // 查询本身成没成功(HTTP 状态)和有没有记录分开记:空答案不能盖住"查询失败"
-            out.resolve.ok6 = r6.ok
-            out.resolve.status6 = r6.status
-            out.resolve.answers6 = ((body6 && body6.Answer) || []).filter((a) => a && a.data && String(a.data).includes(':')).map((a) => a.data)
+            // 查询本身成没成功和有没有记录分开记:空答案不能盖住"查询失败"
+            out.resolve.answers6 = (await resolveDns(target, 'AAAA')).map((a) => String(a && a.address)).filter((a) => a.includes(':'))
+            out.resolve.ok6 = true
           } catch (err) {
+            out.resolve.ok6 = false
             out.resolve.answers6 = []
             out.resolve.error6 = errorMessage(err)
           }
@@ -347,8 +375,9 @@ export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = gl
     // 80 以外一律按 TLS 处理(4433、8443 这类都是 https)。
     const bodyPort = Number((req.body || {}).port)
     const port = Number.isInteger(bodyPort) && bodyPort >= 1 && bodyPort <= 65535 ? bodyPort : isIp(target) ? 80 : 443
-    const secure = port !== 80
-    let exit = { url: targetUrl(target, port, secure) }
+    // 和模拟终端同一个判法(api/terminal-test.mjs):TLS 一定加密,TCP 不加密,GET / HEAD 按端口(80 以外按 https)
+    const secure = method === 'TLS' || (method !== 'TCP' && port !== 80)
+    let exit = { url: ['TCP', 'TLS'].includes(method) ? `${method.toLowerCase()}://${hostPort(target, port)}` : targetUrl(target, port, secure), method }
     // 查连接表和访问并行,而不是访问完再查:访问失败(对端关连接、超时)的那一刻这条连接就从内核
     // 连接表里消失了,事后什么都查不到;趁请求还挂着的时候找到它,失败了也知道是从哪个节点出去的。
     // 探测连接认得很准:入站是面板的回环 mixed(metadata.type = mixed/panel-in)、目标端口对得上、
@@ -358,7 +387,7 @@ export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = gl
     // 像终端一样:解析出了地址就按第一个地址去连(fake-ip 也照连——终端拿到的就是它)
     const connectTo = !isIp(target) && out.resolve && out.resolve.answers.length ? String(out.resolve.answers[0]) : ''
     if (connectTo) exit.connectTo = connectTo
-    const probing = probe(target, { port, secure, connectTo }).then((r) => { settled = true; return r })
+    const probing = probe(target, { port, secure, connectTo, method }).then((r) => { settled = true; return r })
     const resolvedIps = new Set(((out.resolve && out.resolve.answers) || []).map(String))
     const sameTarget = (m) => String(m.host || '').toLowerCase() === target ||
       m.destinationIP === target ||
@@ -426,7 +455,7 @@ export const registerRouteTestRoutes = (app, { store, ctx, paths, fetchImpl = gl
     // 有 AAAA 记录就按第一个 v6 地址再访问一次,v4 / v6 链路分别验证(只记探测结果,不再查连接表)
     const connectTo6 = !isIp(target) && out.resolve && Array.isArray(out.resolve.answers6) && out.resolve.answers6.length ? String(out.resolve.answers6[0]) : ''
     if (connectTo6) {
-      const r6 = await probe(target, { port, secure, connectTo: connectTo6 })
+      const r6 = await probe(target, { port, secure, connectTo: connectTo6, method })
       out.exit6 = { connectTo: connectTo6, ok: r6.ok, status: r6.status, ms: r6.ms }
       if (!r6.ok) out.exit6.error = r6.error
       if (typeof r6.close === 'function') r6.close()

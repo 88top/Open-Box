@@ -375,7 +375,7 @@ test('终端分流（dnsmasq 转发模式）:内核看不到终端来源,不生�
   assert.equal(dns.independent_cache, undefined)
 })
 
-test('终端分流（dnsmasq 转发模式）:「直连」「不进内核」的终端查询由入口转给内核、按终端答——不进内核的排在前置自定义分流前面,直连的排在后面;本地主机名交回 dnsmasq', () => {
+test('终端分流（dnsmasq 转发模式）:「直连」「不进内核」和走节点的终端查询由入口转给内核、按终端答——不进内核的排在前置自定义分流前面,直连 / 走节点的排在后面;本地主机名交回 dnsmasq', () => {
   const profile = withRouting({
     policies: [{ id: 'y', name: 'Youtube', default: 'HK', domainSuffix: ['youtube.com'] }],
     custom: { rules: [{ type: 'domainSuffix', value: 'x.test', outbound: 'HK' }] },
@@ -394,7 +394,10 @@ test('终端分流（dnsmasq 转发模式）:「直连」「不进内核」的�
   assert.ok(bypassAt >= 0 && bypassAt < customAt, '不进内核的终端整台不进内核,前置自定义分流也管不到它,排在前面、不会拿到占位地址')
   assert.ok(directAt > customAt, '直连终端排在前置自定义分流后面:走代理的自定义域名照样拿占位地址、进内核按规则走')
   assert.ok(directAt < at((r) => r.domain_suffix && r.domain_suffix[0] === 'youtube.com'), '排在站点集前面:直连终端查 youtube.com 也是直连解析')
-  assert.ok(!dns.rules.some((r) => r.source_ip_cidr && r.source_ip_cidr.includes('192.168.1.20/32')), '走代理的终端整台进内核,dnsmasq 模式下仍按域名规则答(老样子)')
+  // 指定走节点的终端也按终端答(GitHub #574):解析跟着它的出口交给代理侧,排在前置自定义分流后面、站点集前面
+  const proxyAt = at((r) => r.source_ip_cidr && r.source_ip_cidr.includes('192.168.1.20/32') && !r.domain_suffix && !r.domain_regex)
+  assert.ok(proxyAt > customAt && proxyAt < at((r) => r.domain_suffix && r.domain_suffix[0] === 'youtube.com'), JSON.stringify(dns.rules))
+  assert.ok(isProxyResolverTag(dns.rules[proxyAt].server), dns.rules[proxyAt].server)
   // 转进来的终端不再经过 dnsmasq:本地主机名只对它们交回 dnsmasq(dns-local)
   const local = dns.rules.filter((r) => r.server === 'dns-local')
   assert.deepEqual(local, [
@@ -402,13 +405,16 @@ test('终端分流（dnsmasq 转发模式）:「直连」「不进内核」的�
     { source_ip_cidr: ['192.168.1.10/32'], domain_regex: ['^[^.]+$'], server: 'dns-local' },
     { source_mac_address: ['aa:bb:cc:00:11:22'], domain_suffix: ['.lan', '.local', '.home', '.internal', '.home.arpa'], server: 'dns-local' },
     { source_mac_address: ['aa:bb:cc:00:11:22'], domain_regex: ['^[^.]+$'], server: 'dns-local' },
+    { source_ip_cidr: ['192.168.1.20/32'], domain_suffix: ['.lan', '.local', '.home', '.internal', '.home.arpa'], server: 'dns-local' },
+    { source_ip_cidr: ['192.168.1.20/32'], domain_regex: ['^[^.]+$'], server: 'dns-local' },
   ])
   assert.ok(dns.servers.some((s) => s.tag === 'dns-local' && s.type === 'local'))
   assert.equal(dns.servers.filter((s) => s.tag === 'dns-terminal-direct').length, 1)
 
-  // 「直连不进内核」关掉:直连终端整台进内核,不用按终端答;不进内核的终端照旧
+  // 「直连不进内核」关掉:直连终端整台进内核,不用按终端答;不进内核、走节点的终端照旧
   const off = buildDns(profile, { ...options, terminalDns: { autoRedirect: true, directBypass: false } })
-  assert.ok(!off.rules.some((r) => r.source_ip_cidr))
+  assert.ok(!off.rules.some((r) => r.source_ip_cidr && r.source_ip_cidr.includes('192.168.1.10/32')))
+  assert.ok(off.rules.some((r) => r.source_ip_cidr && r.source_ip_cidr.includes('192.168.1.20/32') && isProxyResolverTag(r.server)))
   assert.ok(off.rules.some((r) => r.source_mac_address && r.server === 'dns-terminal-direct'))
   // 没有 nft 重定向(纯 tun)、或者没开分流解析:入口转不了 / 不用转,一条都不写
   const pure = buildDns(profile, { ...options, terminalDns: { autoRedirect: false, directBypass: true } })

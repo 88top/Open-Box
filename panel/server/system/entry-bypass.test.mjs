@@ -89,6 +89,23 @@ test('端口白名单(#198 / #199):只有名单上的端口进内核,其余从�
   assert.equal(entryBypassNft({ ports: '', portsMode: 'whitelist', lanIfaces: ['br-lan'] }), '', '名单为空时不装白名单,不能全部放行')
 })
 
+test('按端口放行:发往 FakeIP 占位段的包不打标记(GitHub #572 #517:占位地址只有内核认得,放行了就从宽带口发出去、连不上);黑名单入口 / 本机出站、白名单、纯 tun 都一样', () => {
+  const fakeIpCidrs = { v4: ['198.19.0.0/16'], v6: ['fc00::/18'] }
+  const black = entryBypassNft({ ports: '993, 8000-8100', autoRedirect: false, pureTun: true, fakeIpCidrs }).split('\n').map((l) => l.trim())
+  for (const dir of ['dport', 'sport']) {
+    const v4 = `meta nfproto ipv4 ip daddr != { 198.19.0.0/16 } meta l4proto { tcp, udp } th ${dir} { 993, 8000-8100 } ${MARK}`
+    const v6 = `meta nfproto ipv6 ip6 daddr != { fc00::/18 } meta l4proto { tcp, udp } th ${dir} { 993, 8000-8100 } ${MARK}`
+    assert.equal(black.filter((l) => l === v4).length, 2, `入口和本机出站各一条:\n${black.join('\n')}`)
+    assert.equal(black.filter((l) => l === v6).length, 2)
+  }
+  assert.ok(!black.some((l) => l.startsWith('meta l4proto')), '没有不看目标地址的端口规则')
+  const white = entryBypassNft({ ports: '80, 443', portsMode: 'whitelist', lanIfaces: ['br-lan'], autoRedirect: true, fakeIpCidrs: { v4: ['198.19.0.0/16'], v6: [] } }).split('\n').map((l) => l.trim())
+  assert.ok(white.includes(`iifname { "br-lan" } meta nfproto ipv4 ip daddr != { 198.19.0.0/16 } meta l4proto { tcp, udp } th dport != { 80, 443 } th sport != { 80, 443 } ${MARK}`), white.join('\n'))
+  assert.ok(white.includes(`iifname { "br-lan" } meta nfproto ipv6 meta l4proto { tcp, udp } th dport != { 80, 443 } th sport != { 80, 443 } ${MARK}`), 'v6 没有占位段(不交给节点)时照常放行')
+  // 没开 FakeIP:和以前一字不差
+  assert.ok(entryBypassNft({ ports: '993' }).includes(`\t\tmeta l4proto { tcp, udp } th dport { 993 } ${MARK}`))
+})
+
 test('直连应答放行:有 nft 重定向时建两个带超时的集合,命中就打内核标记;集合空着等于没有', () => {
   const text = entryBypassNft({ autoRedirect: true, directAnswered: true })
   assert.ok(text.startsWith('\tset direct_answered4 {\n\t\ttype ipv4_addr; flags timeout;\n\t}\n\tset direct_answered6 {\n\t\ttype ipv6_addr; flags timeout;\n\t}\n'))

@@ -39,7 +39,7 @@ test('parseChannelVideos:新老两种写法都认,按页面顺序(新的在前),
   assert.equal(parseChannelVideos('<html>同意页</html>'), null)
 })
 
-test('mergeTutorialVideos:标题带 Open-Box / openbox(大小写不管)的按发布先后接在后面;掉出页面的老条目留着;改名不再带的拿掉', () => {
+test('mergeTutorialVideos:标题带 Open-Box / openbox(大小写不管)的按发布先后接在后面;掉出页面的老条目留着;页面标题不带(翻译 / 截断)的已知条目不删、留原标题', () => {
   const known = [
     { id: 'OLDOLDOLD01', title: 'Open-Box 第一期' },
     { id: 'RENAMED0002', title: 'Open-Box 第二期' },
@@ -53,6 +53,7 @@ test('mergeTutorialVideos:标题带 Open-Box / openbox(大小写不管)的按发
   ]
   assert.deepEqual(mergeTutorialVideos(known, fresh), [
     { id: 'OLDOLDOLD01', title: 'Open-Box 第一期' },
+    { id: 'RENAMED0002', title: 'Open-Box 第二期' },
     { id: 'KEEPTITLE03', title: 'Open-box 第三期(改了标题)' },
     { id: 'NEWNEWNEW05', title: 'OPENBOX 客户端来了' },
   ])

@@ -301,7 +301,7 @@ export const deployConfig = async (ctx, paths, { config, profile, userGroups, no
     // 解析要由内核按终端答、入口把查询转给内核 DNS 入站的终端(engine/client-routes.mjs 的 terminalDnsSources,和 engine/dns.mjs
     // 生成规则用的同一个判断)。按此刻的 autoRedirect 算:降级成纯 tun 后就没有了
     const terminalDnsNow = () => terminalDnsSources(normalizeClientRoutes(profile.clientRoutes, { directTag: builtin.direct }), {
-      dnsMode, autoRedirect, directBypass: profile.directBypass !== false, splitDns: Boolean(profile.dns && profile.dns.split), directTag: builtin.direct,
+      dnsMode, autoRedirect, directBypass: profile.directBypass !== false, splitDns: Boolean(profile.dns && profile.dns.split), directTag: builtin.direct, blockTag: builtin.block,
     })
     // dnsmasq 查询日志(system/dnsmasq-query-log.mjs)开没开:DNS 接管应用完才知道,变了就把元数据再写一遍。面板按它读日志、认终端
     let queryLogState = { active: false, reason: '' }

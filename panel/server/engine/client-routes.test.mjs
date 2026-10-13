@@ -84,16 +84,18 @@ test('哪些终端的解析由内核按终端答(入口把查询转给内核 DNS
   assert.equal(isDirectClientRoute(direct, '直连'), true)
   assert.equal(isDirectClientRoute(bypass, '直连'), false, '不进内核的出口也写成直连,但它在入口打标记,不归首包预判')
   assert.equal(isDirectClientRoute(proxy, '直连'), false)
-  const on = { dnsMode: 'dnsmasq', autoRedirect: true, directBypass: true, splitDns: true, directTag: '直连' }
-  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, on)), [true, true, false])
-  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, dnsMode: 'hijack' })), [false, true, false], '劫持模式下内核本来就接得到直连终端的查询')
-  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, directBypass: false })), [false, true, false])
+  const on = { dnsMode: 'dnsmasq', autoRedirect: true, directBypass: true, splitDns: true, directTag: '直连', blockTag: '拒绝' }
+  // dnsmasq 模式下指定走节点的终端也按终端答(GitHub #574):解析跟着它的出口
+  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, on)), [true, true, true])
+  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, dnsMode: 'hijack' })), [false, true, false], '劫持模式下内核本来就接得到直连 / 走节点终端的查询')
+  assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, directBypass: false })), [false, true, true], '「直连不进内核」关着只影响直连终端')
+  assert.equal(terminalDnsRedirected({ sources: ['192.168.3.50/32'], outbound: '拒绝' }, on), false, '拒绝的终端照旧按域名规则答')
   assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, autoRedirect: false })), [false, false, false])
   assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, splitDns: false })), [false, false, false])
   assert.deepEqual(list.map((cr) => terminalDnsRedirected(cr, { ...on, dnsMode: 'off' })), [false, false, false])
   // 「不进内核」的单独列:入口只转它发给路由器自己的查询,它自己指定的外部 DNS 交给路由器(terminalDnsLocalOnly)
   assert.deepEqual(list.map(terminalDnsLocalOnly), [false, true, false])
-  assert.deepEqual(terminalDnsSources(list, on), { ips: ['192.168.3.18/32'], macs: [], localIps: [], localMacs: ['aa:bb:cc:00:11:22'] })
+  assert.deepEqual(terminalDnsSources(list, on), { ips: ['192.168.3.18/32', '192.168.3.40/32'], macs: [], localIps: [], localMacs: ['aa:bb:cc:00:11:22'] })
   assert.deepEqual(terminalDnsSources(list, { ...on, dnsMode: 'hijack' }), { ips: [], macs: [], localIps: [], localMacs: ['aa:bb:cc:00:11:22'] })
 })
 
