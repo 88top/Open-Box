@@ -1176,6 +1176,66 @@ resolve_channel() {
   esac
 }
 
+# 装好的旧脚本只负责派发:先取最新 Release 的升级脚本,再由它执行这次升级。放在后台派发之后、
+# 获取升级锁之前,LuCI / 面板不会为下载脚本等待,重新执行也不会撞上自己持有的锁。
+# --probe / --cancel 已在上面返回;手动下载到安装目录外的脚本也直接执行(发布验收用)。
+refresh_update_script() {
+  detect_downloader
+  ensure_tmp_parent
+  resolve_channel
+  _fresh="$TMP_PARENT/.openbox-update-fresh.$$.sh"
+  trap 'rm -f -- "$_fresh"; if [ "${OPENBOX_UPDATE_RELOCATED:-0}" = "1" ]; then rm -f -- "$0"; fi' EXIT INT TERM
+  STATUS_PID=$$
+  write_status starting "" "" "正在获取最新升级脚本"
+  _script_url="https://github.com/$REPO/releases/latest/download/update.sh"
+  _sources=""
+  if [ "$CHANNEL" = "mirror" ]; then
+    _sources="${MIRROR_PREFIX:-$BUILTIN_MIRRORS}"
+  fi
+  _ready=0
+  # 镜像先按这次选择的通道试,失败再直连;直连通道不擅自换镜像。
+  for _source in $_sources direct; do
+    rm -f -- "$_fresh"
+    case "$_source" in
+      direct) _url="$_script_url" ;;
+      http://*|https://*) _url="${_source%/}/$_script_url" ;;
+      *) _url="https://${_source%/}/$_script_url" ;;
+    esac
+    if fetch_to_file_probe "$_url" "$_fresh" \
+      && [ "$(head -n 1 "$_fresh")" = '#!/bin/sh' ] \
+      && grep -q '^# Open-Box 升级脚本' "$_fresh" \
+      && sh -n "$_fresh"; then
+      _ready=1
+      break
+    fi
+  done
+  if [ "$_ready" != "1" ]; then
+    write_status failed "" "" "无法获取最新升级脚本,现有安装未改动"
+    die "无法获取最新升级脚本,请检查下载通道后重试。现有安装未改动。"
+  fi
+  if cancel_requested; then
+    write_status cancelled "" "" "已取消(用户请求)"
+    exit 0
+  fi
+  set --
+  [ "$ROLLBACK_MODE" = "0" ] || set -- "$@" --rollback
+  case "$CHANNEL_OVERRIDE" in
+    direct) set -- "$@" --direct ;;
+    mirror)
+      set -- "$@" --mirror
+      [ -z "$CLI_MIRROR_PREFIX" ] || set -- "$@" "$CLI_MIRROR_PREFIX"
+      ;;
+  esac
+  [ -z "$EXPECT_VERSION" ] || set -- "$@" --expect "$EXPECT_VERSION"
+  rm -f -- "$0"
+  OPENBOX_UPDATE_REFRESHED=1 OPENBOX_UPDATE_RELOCATED=1 OPENBOX_UPDATE_DISPATCHED=1 \
+    exec sh "$_fresh" "$@"
+}
+
+if [ "${OPENBOX_UPDATE_RELOCATED:-0}" = "1" ] && [ "${OPENBOX_UPDATE_REFRESHED:-0}" != "1" ]; then
+  refresh_update_script
+fi
+
 # 走到这里,说明既不是 --probe 也不是 --cancel:这是真正要执行升级逻辑的进程
 # (前台同步调用,或 --detach 派生出的后台子进程)。从这里开始,STATUS_PID 才被
 # 赋值为非空——write_status() 从此真正写文件(见该函数定义处的说明)。清掉可能
@@ -1853,9 +1913,30 @@ rollback_components() {
 # (开发路由器实测)。那个版本没有这个脚本(只会是降级到老版本)就保持停止,提示去面板点启动。
 # 新版本面板起不来、或者换文件途中失败,整体回退之后也走这里,把旧版本的内核拉起来。结果写进 CORE_MSG
 # (定义放在换文件之前:swap_failed 在换文件途中就会调它)
+# 放在换文件之前:失败回退时也需要等旧面板完成启动 / 数据库迁移。
+panel_healthy() {
+  _ph_port=$(cat "$INSTALL_ROOT/data/panel-port" 2>/dev/null | tr -dc '0-9' || true)
+  [ -n "$_ph_port" ] || _ph_port=2026
+  _ph_deadline=$(( $(date +%s) + $1 ))
+  while :; do
+    case "$DOWNLOADER" in
+      curl) _ph_body=$(curl -fsS --max-time 3 "http://127.0.0.1:$_ph_port/api/health" 2>/dev/null || true) ;;
+      *) _ph_body=$(wget -q -T 3 -O - "http://127.0.0.1:$_ph_port/api/health" 2>/dev/null || true) ;;
+    esac
+    case "$_ph_body" in *'"ok":true'*) return 0 ;; esac
+    [ "$(date +%s)" -lt "$_ph_deadline" ] || return 1
+    sleep 2
+  done
+}
+
 restart_core() {
   CORE_MSG="内核未自动重启——如之前配置并运行着代理服务,请到面板重新启动它。"
   [ "$CORE_WAS_RUNNING" = "1" ] || return 0
+  if ! panel_healthy "${OPENBOX_UPDATE_HEALTH_WAIT:-90}"; then
+    warn "面板尚未应答,没有自动部署内核,请在面板恢复后手动启动。"
+    CORE_MSG="面板尚未应答,内核未自动重启;请在面板恢复后手动启动。"
+    return 0
+  fi
   DEPLOY_CLI="$INSTALL_ROOT/panel/server/cli/deploy.mjs"
   if [ -x "$INSTALL_ROOT/node/bin/node" ] && [ -f "$DEPLOY_CLI" ]; then
     # 面板这时已经起来了,前端能重新读到状态文件:给内核重启单独一个阶段,否则弹窗
@@ -2017,22 +2098,6 @@ if [ "$_acl_changed" = "1" ] && [ -x /etc/init.d/rpcd ]; then
 fi
 fi
 
-# 面板起来没有:轮询 /api/health(不用登录),最多等 $1 秒。端口按 data/panel-port,没有就是 2026。
-# 只看启动命令的返回值不够——procd / systemd 都是立刻返回,Node 随后崩溃循环也照样返回成功
-panel_healthy() {
-  _ph_port=$(cat "$INSTALL_ROOT/data/panel-port" 2>/dev/null | tr -dc '0-9' || true)
-  [ -n "$_ph_port" ] || _ph_port=2026
-  _ph_deadline=$(( $(date +%s) + $1 ))
-  while :; do
-    case "$DOWNLOADER" in
-      curl) _ph_body=$(curl -fsS --max-time 3 "http://127.0.0.1:$_ph_port/api/health" 2>/dev/null || true) ;;
-      *) _ph_body=$(wget -q -T 3 -O - "http://127.0.0.1:$_ph_port/api/health" 2>/dev/null || true) ;;
-    esac
-    case "$_ph_body" in *'"ok":true'*) return 0 ;; esac
-    [ "$(date +%s)" -lt "$_ph_deadline" ] || return 1
-    sleep 2
-  done
-}
 
 info "启动面板..."
 if [ "$PLATFORM" = "openwrt" ]; then
