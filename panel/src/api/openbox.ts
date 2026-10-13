@@ -644,6 +644,8 @@ export interface OpenboxUserGroup {
   idleTimeout?: string
   // urltest / failover 用:这个组自己的测速地址,空 = 用档案里的全局地址
   testUrl?: string
+  // urltest / failover 用:这个组自己的可接受状态码(200-399 或 204,多段用 / 连接),空 = 用档案里的全局设置
+  expectedStatus?: string
   // failover 用:主备页签(唯一的成员来源;members 对故障转移没有意义,服务端会清空)
   lanes?: OpenboxFailoverLane[]
   failover?: OpenboxFailoverSettings

@@ -910,6 +910,10 @@ const zhTW: LANG_MESSAGE = {
   chainDescription: '一個節點不直接撥號,而是先經另一個節點 / 節點組再去連(住宅 IP、被牆的自建節點常這麼用)。鏈式節點可以加進節點組成員,或在前置自訂分流 / 終端分流裡直接選作出口;不參加動態節點組。',
   chainAdd: '新增鏈式代理',
   chainAddTitle: '新增鏈式代理',
+  // 節點組彈窗 · 可接受狀態碼
+  groupExpectedStatus: '可接受狀態碼',
+  groupExpectedStatusPlaceholder: '留空 = 用全域設定',
+  groupExpectedStatusHint: '測速回的狀態碼在這裡面才算通,如 200-299 或 204,多段用 / 隔開;留空 = 用全域設定。',
   chainEditTitle: '修改鏈式代理',
   chainEmpty: '還沒有鏈式代理。',
   chainBadge: '鏈式代理',

@@ -890,6 +890,10 @@ const zh: LANG_MESSAGE = {
   chainDescription: '一个节点不直接拨号,而是先经另一个节点 / 节点组再去连(住宅 IP、被墙的自建节点常这么用)。链式节点可以加进节点组成员,或在前置自定义分流 / 终端分流里直接选作出口;不参加动态节点组。',
   chainAdd: '添加链式代理',
   chainAddTitle: '添加链式代理',
+  // 节点组弹窗 · 可接受状态码
+  groupExpectedStatus: '可接受状态码',
+  groupExpectedStatusPlaceholder: '留空 = 用全局设置',
+  groupExpectedStatusHint: '测速回的状态码在这里面才算通,如 200-299 或 204,多段用 / 隔开;留空 = 用全局设置。',
   chainEditTitle: '修改链式代理',
   chainEmpty: '还没有链式代理。',
   chainProxyAdd: '添加链式代理',

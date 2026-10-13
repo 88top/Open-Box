@@ -912,6 +912,10 @@ const en = {
   chainDescription: 'A node that does not dial directly but connects through another node or group first (common for residential IPs and self-hosted nodes that are blocked). A chain node can be added as a group member, or picked as the exit in pre-custom routing / terminal routing; it does not join dynamic groups.',
   chainAdd: 'Add chain proxy',
   chainAddTitle: 'Add chain proxy',
+  // Node group dialog · accepted status code
+  groupExpectedStatus: 'Accepted status',
+  groupExpectedStatusPlaceholder: 'Empty = global setting',
+  groupExpectedStatusHint: 'A test only counts as passing if the returned status code is in this list, e.g. 200-299 or 204; separate several with /. Empty = use the global setting.',
   chainEditTitle: 'Edit chain proxy',
   chainEmpty: 'No chain proxies yet.',
   chainBadge: 'Chain proxy',

@@ -107,8 +107,29 @@
     <DialogWrapper
       v-model="showBuiltinEditor"
       :title="$t('groupEditTitle')"
-      box-class="w-full max-w-2xl"
+      box-class="w-full max-w-4xl"
     >
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showBuiltinEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveBuiltin"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('subscriptionSave') }}
+        </button>
+      </template>
       <div
         v-if="builtinDraft"
         class="flex flex-col gap-4"
@@ -140,35 +161,36 @@
           </div>
         </div>
         <p class="text-base-content/50 text-xs">{{ $t('groupBuiltinEditHint') }}</p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showBuiltinEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveBuiltin"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('subscriptionSave') }}
-          </button>
-        </div>
       </div>
     </DialogWrapper>
 
     <DialogWrapper
       v-model="showEditor"
       :title="$t(editing?.id ? 'groupEditTitle' : 'groupAddTitle')"
-      box-class="w-full max-w-2xl"
+      box-class="w-full max-w-4xl"
     >
+      <!-- 取消 / 保存放在底栏:内容再长也只滚中间那块,按钮始终在弹窗底部 -->
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveDraft()"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('subscriptionSave') }}
+        </button>
+      </template>
       <div
         v-if="draft"
         class="flex flex-col gap-4"
@@ -249,14 +271,29 @@
                 <span class="text-base-content/60 text-xs">{{ $t('groupUnitMs') }}</span>
               </div>
             </div>
-            <div class="flex min-w-0 flex-1 flex-col gap-1">
-              <label class="text-xs font-medium">{{ $t('groupTestUrl') }}</label>
-              <input
-                v-model="draft.testUrl"
-                type="url"
-                class="input input-sm w-full font-mono text-xs"
-                :placeholder="$t('groupTestUrlPlaceholder')"
-              />
+            <!-- 测速地址 + 可接受状态码:各占半行以上的宽度,单独排一整行,不挤在规则 / 间隔 / 容差那一行里 -->
+            <div class="flex w-full min-w-0 items-end gap-3">
+              <div class="flex min-w-0 flex-1 flex-col gap-1">
+                <label class="text-xs font-medium">{{ $t('groupTestUrl') }}</label>
+                <input
+                  v-model="draft.testUrl"
+                  type="url"
+                  class="input input-sm w-full font-mono text-xs"
+                  :placeholder="$t('groupTestUrlPlaceholder')"
+                />
+              </div>
+              <div class="flex w-40 shrink-0 flex-col gap-1">
+                <label
+                  class="text-xs font-medium"
+                  v-tip="$t('groupExpectedStatusHint')"
+                >{{ $t('groupExpectedStatus') }}</label>
+                <input
+                  v-model="draft.expectedStatus"
+                  type="text"
+                  class="input input-sm w-full font-mono text-xs"
+                  :placeholder="$t('groupExpectedStatusPlaceholder')"
+                />
+              </div>
             </div>
             <button
               type="button"
@@ -295,14 +332,29 @@
                 <span class="text-base-content/60 text-xs">{{ $t('groupUnitMs') }}</span>
               </div>
             </div>
-            <div class="flex min-w-0 flex-1 flex-col gap-1">
-              <label class="text-xs font-medium">{{ $t('groupTestUrl') }}</label>
-              <input
-                v-model="draft.testUrl"
-                type="url"
-                class="input input-sm w-full font-mono text-xs"
-                :placeholder="$t('groupTestUrlPlaceholder')"
-              />
+            <!-- 测速地址 + 可接受状态码:各占半行以上的宽度,单独排一整行,不挤在规则 / 间隔 / 容差那一行里 -->
+            <div class="flex w-full min-w-0 items-end gap-3">
+              <div class="flex min-w-0 flex-1 flex-col gap-1">
+                <label class="text-xs font-medium">{{ $t('groupTestUrl') }}</label>
+                <input
+                  v-model="draft.testUrl"
+                  type="url"
+                  class="input input-sm w-full font-mono text-xs"
+                  :placeholder="$t('groupTestUrlPlaceholder')"
+                />
+              </div>
+              <div class="flex w-40 shrink-0 flex-col gap-1">
+                <label
+                  class="text-xs font-medium"
+                  v-tip="$t('groupExpectedStatusHint')"
+                >{{ $t('groupExpectedStatus') }}</label>
+                <input
+                  v-model="draft.expectedStatus"
+                  type="text"
+                  class="input input-sm w-full font-mono text-xs"
+                  :placeholder="$t('groupExpectedStatusPlaceholder')"
+                />
+              </div>
             </div>
           </template>
         </div>
@@ -665,28 +717,6 @@
             </div>
           </div>
         </div>
-
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveDraft()"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('subscriptionSave') }}
-          </button>
-        </div>
       </div>
     </DialogWrapper>
 
@@ -1030,12 +1060,14 @@ const openEditor = (group: OpenboxUserGroup | null) => {
         interval: '300s',
         tolerance: 100,
         testUrl: '',
+        expectedStatus: '',
       }
   // 老记录可能没有这几个字段(服务端读的时候会补,但这里编辑的是本地副本)
   if (draft.value) {
     if (!draft.value.mode) draft.value.mode = 'static'
     if (!draft.value.keywords) draft.value.keywords = []
     if (draft.value.icon === undefined) draft.value.icon = ''
+    if (draft.value.expectedStatus === undefined) draft.value.expectedStatus = ''
     if (draft.value.type === 'failover') ensureFailoverFields(draft.value)
   }
   lastType.value = draft.value?.type ?? 'urltest'
@@ -1068,6 +1100,7 @@ const ensureFailoverFields = (d: OpenboxUserGroup) => {
   if (!d.interval || !/^\d+s$/.test(d.interval)) d.interval = '300s'
   if (typeof d.tolerance !== 'number') d.tolerance = 100
   if (d.testUrl === undefined) d.testUrl = ''
+  if (d.expectedStatus === undefined) d.expectedStatus = ''
   d.failover = { ...FAILOVER_DEFAULTS, ...(d.failover || {}) }
 }
 const failoverSettings = computed(() => (draft.value?.type === 'failover' ? draft.value.failover ?? null : null))
@@ -1526,6 +1559,21 @@ const persist = async (next: OpenboxUserGroup[]) => {
   return res
 }
 
+// 「可接受状态码」:200-399 或 204,多段用 / 连接;空 / * = 用全局设置。写法不对返回 null(服务端校验同一套规则)
+const normalizeExpectedStatus = (raw: string | undefined): string | null => {
+  const text = (raw ?? '').trim().replace(/\s+/g, '')
+  if (!text || text === '*') return ''
+  const parts = text.split('/')
+  for (const part of parts) {
+    const m = /^(\d{3})(?:-(\d{3}))?$/.exec(part)
+    if (!m) return null
+    const lo = Number(m[1])
+    const hi = m[2] ? Number(m[2]) : lo
+    if (lo < 100 || hi > 599 || lo > hi) return null
+  }
+  return parts.join('/')
+}
+
 const showTypeChangeConfirm = ref(false)
 const saveDraft = async (typeChangeConfirmed = false) => {
   if (!draft.value || saving.value) return
@@ -1560,6 +1608,12 @@ const saveDraft = async (typeChangeConfirmed = false) => {
     showNotification({ content: 'groupMembersRequired', type: 'alert-error' })
     return
   }
+  // 可接受状态码只对会自己测速的组(自动择优 / 故障转移)有意义,写法不对就拦住
+  const expectedStatus = normalizeExpectedStatus(draft.value.expectedStatus)
+  if (expectedStatus === null && (draft.value.type === 'urltest' || draft.value.type === 'failover')) {
+    showNotification({ content: 'expectedStatusInvalid', type: 'alert-error' })
+    return
+  }
   // 已保存的故障转移组改成普通类型:主备层次会丢,先确认
   if (!isFailover.value && editing.value?.type === 'failover' && !typeChangeConfirmed) {
     showTypeChangeConfirm.value = true
@@ -1569,7 +1623,7 @@ const saveDraft = async (typeChangeConfirmed = false) => {
   saving.value = true
   try {
     // 组自己的测速地址保留用户选择的 HTTP / HTTPS 协议
-    const base: OpenboxUserGroup = { ...draft.value, name, id: draft.value.id || `g-${Date.now()}`, testUrl: kernelTestUrl(draft.value.testUrl) }
+    const base: OpenboxUserGroup = { ...draft.value, name, id: draft.value.id || `g-${Date.now()}`, testUrl: kernelTestUrl(draft.value.testUrl), expectedStatus: expectedStatus ?? '' }
     let item: OpenboxUserGroup
     if (isFailover.value) {
       // 页签是唯一的成员来源:members / keywords 清空;页签名去掉首尾空白
