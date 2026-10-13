@@ -51,7 +51,10 @@ jobs:
           echo "上游版本:$tag"
 
           last=$(cat .upstream-synced 2>/dev/null || true)
-          if [ "$last" = "$tag" ] && [ "$FORCE" != true ]; then
+          # arm64 原生内核(scripts/native-arm64)缺了也要补:这个目录是后来才加进同步流程的,
+          # 只比版本号的话,早就同步到最新版的分支永远补不上它,发布 arm64 包时才发现
+          if [ "$last" = "$tag" ] && [ "$FORCE" != true ] \
+            && [ -f scripts/native-arm64/openbox-core ] && [ -f scripts/native-arm64/core-build.json ]; then
             echo "已同步到 $tag,无需处理"
             exit 0
           fi
