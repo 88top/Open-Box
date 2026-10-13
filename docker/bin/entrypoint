@@ -3,7 +3,8 @@ set -eu
 ROOT=/opt/open-box
 export OPENBOX_PLATFORM=container OPENBOX_ROOT="$ROOT" OPENSSL_CONF=/dev/null
 export LD_LIBRARY_PATH="$ROOT/node/lib" ZASHBOARD_DB_PATH="$ROOT/data/openbox.sqlite"
-export PORT="${OPENBOX_PANEL_PORT:-2026}" HOST=0.0.0.0 OPENBOX_PANEL_HEAP_MB=160
+export PORT="${OPENBOX_PANEL_PORT:-2026}" HOST=0.0.0.0
+. "$ROOT/docker/bin/panel-env"
 case "$PORT" in ''|*[!0-9]*) echo 'Invalid OPENBOX_PANEL_PORT' >&2; exit 1;; esac
 [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || exit 1
 case "$PORT" in 53|7853|7854|7891|9095) echo 'Panel port conflicts with kernel' >&2; exit 1;; esac
@@ -47,7 +48,7 @@ if "$ROOT/docker/bin/openbox-ctl" enabled; then
  "$ROOT/docker/bin/openbox-ctl" start || echo 'Kernel autostart failed; use panel to repair configuration' >&2
 fi
 while :; do
- "$ROOT/node/bin/node" --max-old-space-size=160 "$ROOT/panel/server/index.mjs" &
+ "$ROOT/node/bin/node" "--max-old-space-size=$OPENBOX_PANEL_HEAP_MB" "$ROOT/panel/server/index.mjs" &
  panel_pid=$!
  printf '%s\n' "$panel_pid" > /tmp/openbox-panel.pid
  wait "$panel_pid" || true

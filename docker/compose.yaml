@@ -1,8 +1,13 @@
 services:
   open-box:
-    image: ${OPENBOX_IMAGE:-open-box:0.1.323}
+    image: ${OPENBOX_IMAGE:-open-box:0.1.324}
     restart: unless-stopped
     stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
     cap_add: [NET_ADMIN, NET_RAW]
     devices: [/dev/net/tun:/dev/net/tun]
     sysctls:
@@ -13,6 +18,8 @@ services:
       TZ: ${TZ:-Asia/Shanghai}
       OPENBOX_PANEL_PORT: ${OPENBOX_PANEL_PORT:-2026}
       OPENBOX_MASQUERADE: ${OPENBOX_MASQUERADE:-1}
+      OPENBOX_PANEL_HEAP_MB: ${OPENBOX_PANEL_HEAP_MB:-160}
+      OPENBOX_PANEL_RSS_LIMIT_MB: ${OPENBOX_PANEL_RSS_LIMIT_MB:-}
     volumes:
       - ./etc:/opt/open-box/etc
       - ./data:/opt/open-box/data

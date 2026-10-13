@@ -2,33 +2,33 @@
 
 在 Linux Docker Engine 上运行，与 OpenWrt / Debian 版使用同一套面板、客户端引擎和 tcp23 内核。
 容器通过 macvlan 或 ipvlan L2 获得独立局域网 IP。终端的 IPv4 网关和 DNS 指向容器后，由容器执行分流。
-v0.1.323 提供 x64 和 arm64 镜像下载包，包含与同版本路由器包一致的 Go 原生配置/分流核心。镜像通过 GitHub Release 分发，下载后使用 `docker load` 加载。
+v0.1.324 提供 x64 和 arm64 镜像下载包，包含与同版本路由器包一致的 Go 原生配置/分流核心。镜像通过 GitHub Release 分发，下载后使用 `docker load` 加载。
 
 Open-Box 自有程序按闭源专有软件分发，未经许可禁止复制传播、再分发、反编译及绕过授权。用户正常安装、离线使用、升级、备份和恢复不受影响；第三方开源组件继续按原许可授权。详见 [LICENSE](../LICENSE) 和 [版权范围](../COPYRIGHT.md)。
 
 ## 下载镜像
 
-从 [v0.1.323 Release](https://github.com/timeflysoon/Open-Box/releases/tag/v0.1.323) 下载宿主对应架构的镜像和 SHA256 文件：
+从 [v0.1.324 Release](https://github.com/timeflysoon/Open-Box/releases/tag/v0.1.324) 下载宿主对应架构的镜像和 SHA256 文件：
 
-- x86_64 / amd64：`open-box-v0.1.323-docker-linux-x64.tar.gz`
-- aarch64 / arm64：`open-box-v0.1.323-docker-linux-arm64.tar.gz`
+- x86_64 / amd64：`open-box-v0.1.324-docker-linux-x64.tar.gz`
+- aarch64 / arm64：`open-box-v0.1.324-docker-linux-arm64.tar.gz`
 
 ```sh
 # x64 示例；arm64 替换文件名中的 x64。
-sha256sum -c open-box-v0.1.323-docker-linux-x64.tar.gz.sha256
-docker load -i open-box-v0.1.323-docker-linux-x64.tar.gz
+sha256sum -c open-box-v0.1.324-docker-linux-x64.tar.gz.sha256
+docker load -i open-box-v0.1.324-docker-linux-x64.tar.gz
 ```
 
-两种镜像均加载为 `open-box:0.1.323`；请按 Docker 宿主架构选择下载文件。
-同时下载 `open-box-v0.1.323-docker-compose.tar.gz`，解包后填写 `.env`。
+两种镜像均加载为 `open-box:0.1.324`；请按 Docker 宿主架构选择下载文件。
+同时下载 `open-box-v0.1.324-docker-compose.tar.gz`，解包后填写 `.env`。
 
 ## 本地构建
 
 构建机先生成同架构完整发布包，再用以下脚本封装。脚本校验安装包 SHA256、架构和 Go 核心完整性：
 
 ```sh
-sh scripts/build-docker.sh x64 .build-cache/releases/v0.1.323 open-box:0.1.323
-sh scripts/build-docker.sh arm64 .build-cache/releases/v0.1.323 open-box:0.1.323
+sh scripts/build-docker.sh x64 .build-cache/releases/v0.1.324 open-box:0.1.324
+sh scripts/build-docker.sh arm64 .build-cache/releases/v0.1.324 open-box:0.1.324
 ```
 
 可设置 `DOCKER_HOST=ssh://openbox-docker21` 在远程 Docker 测试机上构建。设备运行时不需要 Go 编译器或云端授权验证。
@@ -83,7 +83,20 @@ docker compose up -d --force-recreate
 - 第一版只接管 IPv4。IPv6 默认经主路由，不会经过此容器；需要全流量接管时应由用户在主路由/终端停用 IPv6。
 - 时区由 `TZ` 设置；无 dnsmasq / DHCP 接管 / LuCI / 主机时区修改 / 内置模拟 LAN 终端。
 - 面板自检显示 TUN、NET_ADMIN、转发、重定向、nftables、实际截流方式和 NAT 状态。
+  同时读取 IPv4 策略路由；发现优先级在 TUN 规则之前的无条件 main/default 查询时，显示具体规则。
+  这类规则可能导致流量提前走主路由表；诊断不会删除或重排规则，也不能据此判定所有自定义路由均无冲突。
   老 NAS 的内核和 nftables 能力尚未实机验证，不能据当前通用 Linux 测试推定全部可用。
+
+## 内存与日志
+
+`OPENBOX_PANEL_HEAP_MB` 控制面板的 V8 老生代堆，默认 160 MiB，可设置 64–4096 的整数。
+`OPENBOX_PANEL_RSS_LIMIT_MB` 留空时使用现有的堆上限 + 140 MiB 自检；显式设置需至少 120 MiB，且至少为堆上限 + 64 MiB。
+连续三次超限且已运行十分钟、没有部署或升级动作时，面板才平滑重启；内核继续由独立监督进程运行。
+这些参数不是整个容器的内存硬限制，较小的堆可能增加 GC 开销，批量订阅/规则处理应按实际负载测试。
+修改 `.env` 后运行 `docker compose up -d --force-recreate` 生效。
+
+Compose 为当前容器设置 `json-file` 日志轮转，每份最多 10 MiB、保留三份，不修改宿主 Docker 的全局配置或其他容器。
+容器内 `/tmp/openbox-core.log` 仍是当前启动周期的原始内核日志，此设置仅约束 Docker 收集的 stdout/stderr 日志。
 
 ## 当前验收范围（2026-10-13）
 
