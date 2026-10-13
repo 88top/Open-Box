@@ -1,6 +1,6 @@
 services:
   open-box:
-    image: ${OPENBOX_IMAGE:-open-box:0.1.322}
+    image: ${OPENBOX_IMAGE:-open-box:0.1.323}
     restart: unless-stopped
     stop_grace_period: 30s
     cap_add: [NET_ADMIN, NET_RAW]
