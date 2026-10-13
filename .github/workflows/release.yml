@@ -362,7 +362,7 @@ jobs:
   # arm64 在 x64 的 runner 上通过 QEMU 构建(只有一步 apk add 要跑目标架构的程序)。
   docker:
     name: Docker image (${{ matrix.arch }})
-    needs: release
+    needs: [release, kernel-tag]
     runs-on: ubuntu-latest
     permissions:
       contents: write
@@ -419,6 +419,31 @@ jobs:
           out="open-box-${RELEASE_TAG}-docker-compose.tar.gz"
           tar -czf "dist-docker/$out" "$d"
           (cd dist-docker && sha256sum "$out" > "$out.sha256")
+
+      # Docker 一键安装脚本(只在 x64 任务里做一份):上游把它作为 Release 附件发布,不在源码里。
+      # 取内核所取的那个上游版本里的脚本,仓库地址换成自己的,sha256 重算(内容改过,上游的 .sha256 已对不上)。
+      # 上游该版本没有这个附件就只警告,不影响镜像上传。
+      - name: Attach Docker install script from upstream
+        if: steps.chk.outputs.has == 'true' && matrix.arch == 'x64' && env.OPENBOX_KERNEL_SOURCE == 'upstream'
+        env:
+          UPSTREAM_TAG: ${{ needs.kernel-tag.outputs.tag }}
+        run: |
+          set -eu
+          name=open-box-docker-install.sh
+          mkdir -p dist-docker
+          if ! curl -fsSL --retry 3 -o "dist-docker/$name" \
+            "https://github.com/$OPENBOX_KERNEL_REPO/releases/download/$UPSTREAM_TAG/$name"; then
+            echo "::warning::上游 $UPSTREAM_TAG 没有 $name,本次不附带"
+            rm -f "dist-docker/$name"
+            exit 0
+          fi
+          sed -i "s#$OPENBOX_KERNEL_REPO#$OPENBOX_REPO#g" "dist-docker/$name"
+          bash -n "dist-docker/$name"
+          if grep -n "liandu2024" "dist-docker/$name"; then
+            echo "::warning::安装脚本里仍有 liandu2024 字样(见上),确认不是仓库地址后可忽略"
+          fi
+          (cd dist-docker && sha256sum "$name" > "$name.sha256")
+          ls -la dist-docker
 
       - name: Upload to the release
         if: steps.chk.outputs.has == 'true'
