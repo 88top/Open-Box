@@ -1,3 +1,4 @@
 #!/bin/sh
-# 部署流程通过 logread 检查 sing-box 的 FATAL，容器日志仍可通过 docker compose logs 查看。
-cat /tmp/openbox-core.log 2>/dev/null
+# 归档按时间顺序读取；只交出最近 256 KiB，避免部署/诊断一次装入多份大日志。
+# 部署流程仍能看到刚轮转进归档的 FATAL；实时界面日志使用内核自己的 API。
+cat /tmp/openbox-core.log.2 /tmp/openbox-core.log.1 /tmp/openbox-core.log 2>/dev/null | tail -c 262144

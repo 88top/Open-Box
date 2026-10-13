@@ -2,33 +2,33 @@
 
 在 Linux Docker Engine 上运行，与 OpenWrt / Debian 版使用同一套面板、客户端引擎和 tcp23 内核。
 容器通过 macvlan 或 ipvlan L2 获得独立局域网 IP。终端的 IPv4 网关和 DNS 指向容器后，由容器执行分流。
-v0.1.324 提供 x64 和 arm64 镜像下载包，包含与同版本路由器包一致的 Go 原生配置/分流核心。镜像通过 GitHub Release 分发，下载后使用 `docker load` 加载。
+v0.1.325 提供 x64 和 arm64 镜像下载包，包含与同版本路由器包一致的 Go 原生配置/分流核心。镜像通过 GitHub Release 分发，下载后使用 `docker load` 加载。
 
 Open-Box 自有程序按闭源专有软件分发，未经许可禁止复制传播、再分发、反编译及绕过授权。用户正常安装、离线使用、升级、备份和恢复不受影响；第三方开源组件继续按原许可授权。详见 [LICENSE](../LICENSE) 和 [版权范围](../COPYRIGHT.md)。
 
 ## 下载镜像
 
-从 [v0.1.324 Release](https://github.com/timeflysoon/Open-Box/releases/tag/v0.1.324) 下载宿主对应架构的镜像和 SHA256 文件：
+从 [v0.1.325 Release](https://github.com/timeflysoon/Open-Box/releases/tag/v0.1.325) 下载宿主对应架构的镜像和 SHA256 文件：
 
-- x86_64 / amd64：`open-box-v0.1.324-docker-linux-x64.tar.gz`
-- aarch64 / arm64：`open-box-v0.1.324-docker-linux-arm64.tar.gz`
+- x86_64 / amd64：`open-box-v0.1.325-docker-linux-x64.tar.gz`
+- aarch64 / arm64：`open-box-v0.1.325-docker-linux-arm64.tar.gz`
 
 ```sh
 # x64 示例；arm64 替换文件名中的 x64。
-sha256sum -c open-box-v0.1.324-docker-linux-x64.tar.gz.sha256
-docker load -i open-box-v0.1.324-docker-linux-x64.tar.gz
+sha256sum -c open-box-v0.1.325-docker-linux-x64.tar.gz.sha256
+docker load -i open-box-v0.1.325-docker-linux-x64.tar.gz
 ```
 
-两种镜像均加载为 `open-box:0.1.324`；请按 Docker 宿主架构选择下载文件。
-同时下载 `open-box-v0.1.324-docker-compose.tar.gz`，解包后填写 `.env`。
+两种镜像均加载为 `open-box:0.1.325`；请按 Docker 宿主架构选择下载文件。
+同时下载 `open-box-v0.1.325-docker-compose.tar.gz`，解包后填写 `.env`。
 
 ## 本地构建
 
 构建机先生成同架构完整发布包，再用以下脚本封装。脚本校验安装包 SHA256、架构和 Go 核心完整性：
 
 ```sh
-sh scripts/build-docker.sh x64 .build-cache/releases/v0.1.324 open-box:0.1.324
-sh scripts/build-docker.sh arm64 .build-cache/releases/v0.1.324 open-box:0.1.324
+sh scripts/build-docker.sh x64 .build-cache/releases/v0.1.325 open-box:0.1.325
+sh scripts/build-docker.sh arm64 .build-cache/releases/v0.1.325 open-box:0.1.325
 ```
 
 可设置 `DOCKER_HOST=ssh://openbox-docker21` 在远程 Docker 测试机上构建。设备运行时不需要 Go 编译器或云端授权验证。
@@ -96,7 +96,11 @@ docker compose up -d --force-recreate
 修改 `.env` 后运行 `docker compose up -d --force-recreate` 生效。
 
 Compose 为当前容器设置 `json-file` 日志轮转，每份最多 10 MiB、保留三份，不修改宿主 Docker 的全局配置或其他容器。
-容器内 `/tmp/openbox-core.log` 仍是当前启动周期的原始内核日志，此设置仅约束 Docker 收集的 stdout/stderr 日志。
+容器内 `/tmp/openbox-core.log` 使用随镜像提供的 logrotate，每 10 秒检查，超过 5 MiB 后保留两份未压缩归档。
+采用 `copytruncate` 保留写入句柄，不重启内核；复制与截断之间有极短的日志丢行窗口，界面实时日志仍使用内核 API。
+占用允许包含一个检查周期内的增长量，并非严格的 15 MiB 硬上限。归档和状态文件均在容器内，不写入配置/数据卷。
+部署与诊断通过 `logread` 读取当前文件和归档中最近 256 KiB，轮转后的近期 FATAL 仍可用于判断启动失败。
+OpenWrt 使用 procd/logd 的环形缓冲，Linux 服务使用 journald；本次没有给它们增加文件日志或修改系统全局日志策略。
 
 ## 当前验收范围（2026-10-13）
 

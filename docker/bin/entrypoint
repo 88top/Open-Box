@@ -31,6 +31,10 @@ NFT
  fi
 fi
 : > /tmp/openbox-core.log
+chmod 600 /tmp/openbox-core.log
+rm -f /tmp/openbox-core.log.1 /tmp/openbox-core.log.2 /tmp/openbox-logrotate.status
+"$ROOT/docker/bin/openbox-log-rotate" &
+rotate_pid=$!
 tail -F /tmp/openbox-core.log &
 tail_pid=$!
 panel_pid=
@@ -40,6 +44,8 @@ shutdown() {
  [ -z "$panel_pid" ] || kill "$panel_pid" 2>/dev/null || true
  [ -z "$panel_pid" ] || wait "$panel_pid" 2>/dev/null || true
  kill "$tail_pid" 2>/dev/null || true
+ kill "$rotate_pid" 2>/dev/null || true
+ wait "$rotate_pid" 2>/dev/null || true
  rm -f /tmp/openbox-panel.pid
  exit 0
 }
