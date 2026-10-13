@@ -945,6 +945,7 @@ import IconScaleInput from '@/components/common/IconScaleInput.vue'
 import { AUTO_GROUP_DEFAULT_COUNTRIES, COUNTRIES, countryName, findCountry } from '@/constant/countries'
 import { keywordMatches, normalizeForMatch } from '@/helper/keywordMatch'
 import { showNotification } from '@/helper/notification'
+import { fetchProxies } from '@/store/proxies'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import {
   Bars3Icon,
@@ -1551,6 +1552,8 @@ const persistOrder = async () => {
 const persist = async (next: OpenboxUserGroup[]) => {
   const res = await saveNodeGroups(next)
   groups.value = res.groups
+  // 分组落库后刷新代理列表:代理页、站点集里的出站选择器马上看到新增 / 删除 / 改名的分组
+  void fetchProxies().catch(() => {})
   reportDropped(res.dropped || [])
   // 悬空引用:组没空的话 dropped 不会提到它,单独说
   for (const d of res.dangling || []) {
