@@ -1,0 +1,6 @@
+[
+  { "id": "baidu", "icon": "brand:baidu", "name": "百度", "url": "https://www.baidu.com/favicon.ico" },
+  { "id": "google", "icon": "brand:google", "name": "Google", "url": "https://www.google.com/generate_204" },
+  { "id": "openai", "icon": "brand:openai-light", "name": "OpenAI", "url": "https://api.openai.com/v1/models" },
+  { "id": "telegram", "icon": "brand:telegram", "name": "Telegram", "url": "https://telegram.org/favicon.ico" }
+]
