@@ -152,11 +152,10 @@ const blurClass = computed(() => {
 })
 
 const appStyles = computed(() => {
-  const panelRadius = `${Math.min(Math.round(globalRadius.value * 1.05 * 10) / 10, 16)}px`
-  const boxRadius = `${Math.min(Math.round(globalRadius.value * 0.85 * 10) / 10, 14)}px`
-  const navRadius = `${Math.min(Math.round(globalRadius.value * 0.75 * 10) / 10, 13)}px`
-  const fieldRadius = `${Math.min(Math.round(globalRadius.value * 0.58 * 10) / 10, 12)}px`
-  const compactRadius = `${Math.min(Math.round(globalRadius.value * 0.4 * 10) / 10, 9)}px`
+  const panelRadius = `${Math.round(globalRadius.value * 10) / 10}px`
+  const boxRadius = `${Math.round(globalRadius.value * 0.85 * 10) / 10}px`
+  const navRadius = `${Math.round(globalRadius.value * 0.75 * 10) / 10}px`
+  const fieldRadius = `${Math.round(globalRadius.value * 0.58 * 10) / 10}px`
 
   return [
     backgroundImage.value,
@@ -167,10 +166,8 @@ const appStyles = computed(() => {
       '--radius-selector': fieldRadius,
       '--radius-field': fieldRadius,
       '--app-radius-panel': panelRadius,
-      '--app-radius-box': boxRadius,
       '--app-radius-nav': navRadius,
       '--app-radius-field': fieldRadius,
-      '--app-radius-compact': compactRadius,
     },
   ]
 })
