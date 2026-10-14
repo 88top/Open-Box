@@ -118,7 +118,7 @@
           <button
             class="btn btn-sm join-item min-w-12 px-0 text-xl"
             @click="adjustGlobalRadius(1)"
-            :disabled="globalRadius >= 24"
+            :disabled="globalRadius >= 50"
           >
             +
           </button>
@@ -193,7 +193,7 @@ const hasVisibleItems = computed(() => {
 
 const adjustGlobalRadius = (step: number) => {
   const currentValue = Number(globalRadius.value || 0)
-  globalRadius.value = Math.min(24, Math.max(0, currentValue + step))
+  globalRadius.value = Math.min(50, Math.max(0, currentValue + step))
 }
 
 watch(customBackgroundURL, (value) => {
