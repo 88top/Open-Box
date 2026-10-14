@@ -72,7 +72,7 @@ export const emoji = useStorage<EMOJIS>(
 )
 export const customBackgroundURL = useStorage('config/custom-background-image', '')
 export const dashboardTransparent = useStorage('config/dashboard-transparent', 90)
-export const globalRadius = useStorage('config/global-radius', 16)
+export const globalRadius = useStorage('config/global-radius', 26)
 export const autoUpgrade = useStorage('config/auto-upgrade', false)
 export const checkUpgradeCore = useStorage('config/check-upgrade-core', true)
 export const autoUpgradeCore = useStorage('config/auto-upgrade-core', false)
