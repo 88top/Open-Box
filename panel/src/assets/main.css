@@ -216,7 +216,7 @@ html.apple-mobile-ui {
 }
 
 #app-content .tabs-box .tab {
-  border-radius: var(--app-radius-compact, 0.4rem) !important;
+  border-radius: max(calc(var(--app-radius-nav, 0.875rem) - 0.25rem), 0px) !important;
 }
 
 #app-content .proxy-main-tabs .tab {
@@ -278,7 +278,7 @@ html.apple-mobile-ui {
 }
 
 #app-content .proxy-penetration-mode-btn {
-  border-radius: var(--app-radius-compact, 0.4rem) !important;
+  border-radius: max(calc(var(--app-radius-nav, 0.875rem) - 0.25rem), 0px) !important;
 }
 
 /* 拖拽排序进行中(SortableJS 在按住的那一项上加 sortable-chosen,松手才去掉)整页禁止
