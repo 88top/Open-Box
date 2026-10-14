@@ -961,3 +961,15 @@ div::-webkit-scrollbar-thumb:hover {
 #app-content .settings-menu ~ .flex-1.overflow-y-auto.overflow-y-auto {
   overflow-y: scroll;
 }
+
+/* ===== modal-scroll-auto: 弹窗里的滚动区域内容超高才出现滚动条,不常驻轨道 ===== */
+.modal .overflow-y-auto,
+.modal-box .overflow-y-auto,
+dialog .overflow-y-auto,
+[role="dialog"] .overflow-y-auto,
+.modal .overflow-y-scroll,
+.modal-box .overflow-y-scroll,
+dialog .overflow-y-scroll,
+[role="dialog"] .overflow-y-scroll {
+  overflow-y: auto !important;
+}
