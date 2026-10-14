@@ -960,3 +960,8 @@ div::-webkit-scrollbar-thumb:hover {
 #app-content .flex-1.overflow-y-auto.overflow-y-auto {
   overflow-y: auto;
 }
+
+/* ===== v0.1.326-align-settings-scroll: 设置页主滚动容器常驻滚动条轨道(v0.1.326 实测 overflow-y: scroll) ===== */
+#app-content .settings-menu ~ .flex-1.overflow-y-auto.overflow-y-auto {
+  overflow-y: scroll;
+}
