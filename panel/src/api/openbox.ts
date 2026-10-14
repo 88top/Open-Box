@@ -32,6 +32,8 @@ export interface OpenboxRoutingPolicy {
   domainSuffix?: string[]
   domainKeyword?: string[]
   ipCidr?: string[]
+  // 每条规则的备注:键是「类型:值」(geosite-cn 这类规则集记成 ruleset:geosite-cn),值是备注文字
+  notes?: Record<string, string>
 }
 
 // 前置自定义分流:固定置顶、删不掉的一条,排在所有站点集之前。
@@ -43,6 +45,8 @@ export interface OpenboxCustomRule {
   value: string
   // 这一行自己的出口:出站 tag(节点名或节点组名),或 direct / block 占位
   outbound: string
+  // 这一行的备注(可选)
+  note?: string
 }
 
 export interface OpenboxCustomPolicy {

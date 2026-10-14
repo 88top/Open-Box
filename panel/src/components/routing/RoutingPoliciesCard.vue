@@ -311,7 +311,7 @@
     <DialogWrapper
       v-model="showEditor"
       :title="$t(editingCustom ? 'routingCustomEditTitle' : editing ? 'routingPolicyEditTitle' : 'routingPolicyAddTitle')"
-      box-class="w-full max-w-2xl"
+      box-class="w-full max-w-4xl h-[90dvh]"
     >
       <div
         v-if="draft"
@@ -345,9 +345,9 @@
           </div>
         </div>
 
-        <!-- 一条规则一行:类型 + 值。同一个站点集里各行是「或」的关系(和内核一致),
-             所以行与行之间没有先后可言——不给拖拽柄,免得暗示一个并不存在的顺序。
-             站点集走哪条线路不在这儿定:在「代理」页点选。 -->
+        <!-- 一条规则一行:拖动柄 + 类型 + 值 + 备注(前置自定义分流还多一列这一行自己的出口)。
+             前置自定义分流按拖动后的顺序保存(顺序即匹配顺序);站点集里各行是「或」的关系,
+             拖完按类型归位,备注挂在「类型:值」上。站点集走哪条线路不在这儿定:在「代理」页点选。 -->
         <div class="flex flex-col gap-2">
           <div class="flex items-center justify-between gap-2">
             <label class="text-xs font-medium">{{ $t('routingPolicyRulesLabel') }}</label>
@@ -384,14 +384,25 @@
             {{ $t('routingPolicyNoRuleYet') }}
           </p>
 
-          <div
-            v-for="(rule, index) in rules"
-            :key="rule.key"
-            class="flex items-center gap-2"
+          <Draggable
+            v-if="rules.length"
+            v-model="rules"
+            :animation="150"
+            :force-fallback="true"
+            :fallback-tolerance="5"
+            :fallback-on-body="true"
+            handle=".drag-handle"
+            ghost-class="opacity-40"
+            item-key="key"
+            class="flex flex-col gap-2"
+            @end="sortRules"
           >
+            <template #item="{ element: rule, index }">
+              <div class="flex items-center gap-2 max-sm:flex-wrap">
+            <Bars3Icon class="drag-handle text-base-content/40 h-4 w-4 shrink-0 cursor-move" />
             <select
               v-model="rule.type"
-              class="select select-sm w-36 shrink-0"
+              class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
             >
               <option
                 v-for="opt in ruleTypeOptions(rule.type)"
@@ -403,25 +414,36 @@
             </select>
             <!-- geosite/geoip 的值来自上游真有的那份名单,给带搜索的下拉框,
                  外加一个「详情」看它到底包含哪些域名/IP -->
-            <GeoRuleValue
-              v-if="rule.type === 'geosite' || rule.type === 'geoip'"
-              v-model="rule.value"
-              :kind="rule.type"
-              :placeholder="$t(placeholderKey(rule.type))"
-              :exclude="pickedElsewhere(index)"
-            />
-            <!-- 规则集链接:填完网址自动拉回来解析,后面跟「详情(N)」,和上面同一个弹窗 -->
-            <RuleUrlValue
-              v-else-if="rule.type === 'ruleUrl'"
-              v-model="rule.value"
-              :placeholder="$t(placeholderKey(rule.type))"
-            />
+            <div class="flex min-w-0 flex-1 items-center gap-2">
+              <GeoRuleValue
+                v-if="rule.type === 'geosite' || rule.type === 'geoip'"
+                v-model="rule.value"
+                :kind="rule.type"
+                :placeholder="$t(placeholderKey(rule.type))"
+                :exclude="pickedElsewhere(index)"
+              />
+              <!-- 规则集链接:填完网址自动拉回来解析,后面跟「详情(N)」,和上面同一个弹窗 -->
+              <RuleUrlValue
+                v-else-if="rule.type === 'ruleUrl'"
+                v-model="rule.value"
+                :placeholder="$t(placeholderKey(rule.type))"
+              />
+              <input
+                v-else
+                v-model="rule.value"
+                type="text"
+                class="input input-sm min-w-0 flex-1 font-mono text-xs"
+                :placeholder="$t(placeholderKey(rule.type))"
+                @change="splitRule(index)"
+              />
+            </div>
+            <!-- 备注:给这一行写一句说明,存在这一行自己身上 -->
             <input
-              v-else
-              v-model="rule.value"
+              v-model="rule.note"
               type="text"
-              class="input input-sm min-w-0 flex-1 font-mono text-xs"
-              :placeholder="$t(placeholderKey(rule.type))"
+              class="input input-sm w-28 shrink-0 text-xs max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
+              :placeholder="$t('routingPolicyRuleNotePlaceholder')"
+              :maxlength="NOTE_MAX"
             />
             <!-- 这一行自己的出口:和终端分流用同一个选择器(带搜索,分「节点 / 节点组」两个
                  页签,内置的直连 / 拒绝排在节点页签最前)。站点集没有这一列:它整个集共用
@@ -438,38 +460,41 @@
             </div>
             <button
               type="button"
-              class="btn btn-ghost btn-square btn-sm hover:text-error"
+              class="btn btn-ghost btn-square btn-sm hover:text-error max-sm:order-2"
               v-tip="$t('delete')"
               :aria-label="$t('delete')"
               @click="rules.splice(index, 1)"
             >
               <TrashIcon class="h-4 w-4" />
             </button>
-          </div>
-        </div>
-
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveDraft"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('subscriptionSave') }}
-          </button>
+              </div>
+            </template>
+          </Draggable>
         </div>
       </div>
+
+      <!-- 取消 / 保存固定在底栏,规则多了只滚中间 -->
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveDraft"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('subscriptionSave') }}
+        </button>
+      </template>
     </DialogWrapper>
 
     <DialogWrapper
@@ -547,6 +572,7 @@ import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import GeoRuleValue from '@/components/routing/GeoRuleValue.vue'
 import RuleUrlValue from '@/components/routing/RuleUrlValue.vue'
 import { showNotification } from '@/helper/notification'
+import '@/i18n/routing-note'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import { Bars3Icon, PencilSquareIcon, PlusIcon, PowerIcon, TrashIcon } from '@heroicons/vue/24/outline'
 import { computed, ref, watch } from 'vue'
@@ -739,6 +765,8 @@ interface RuleRow {
   value: string
   // 只有前置自定义分流用得上:那里一行一个出口。站点集的行没有这一列,恒为空串。
   outbound: string
+  // 这一行的备注:站点集存进 policy.notes,前置自定义分流存在规则自己的 note 字段里
+  note: string
 }
 let ruleKeySeed = 0
 
@@ -874,7 +902,7 @@ const applyImportedRules = () => {
   const outbound = rules.value[rules.value.length - 1]?.outbound || ''
   const imported = importPreview.value.flatMap((entry) => {
     const type = importTypeMap[entry.type]
-    return type ? [{ key: ++ruleKeySeed, type, value: entry.value, outbound }] : []
+    return type ? [{ key: ++ruleKeySeed, type, value: entry.value, outbound, note: '' }] : []
   })
   // 导入是追加本地明细:原有的规则集链接必须保留,两种来源可以同时生效。
   rules.value = [...rules.value.filter((rule) => rule.value.trim()), ...imported]
@@ -886,21 +914,73 @@ const pickedElsewhere = (index: number) =>
   rules.value.filter((r, i) => i !== index && r.type === rules.value[index]?.type).map((r) => r.value)
 const saving = ref(false)
 
-const addRule = (type: RuleType = 'domainSuffix', value = '', outbound?: string) => {
+const NOTE_MAX = 40
+
+const addRule = (type: RuleType = 'domainSuffix', value = '', outbound?: string, note = '') => {
   // 新行沿用上一行的出口:连着写好几条都走同一个节点是常态,每行重选一遍很烦
   const last = rules.value[rules.value.length - 1]
-  rules.value.push({ key: ++ruleKeySeed, type, value, outbound: outbound ?? last?.outbound ?? '' })
+  rules.value.push({ key: ++ruleKeySeed, type, value, outbound: outbound ?? last?.outbound ?? '', note })
 }
 
-const ruleRow = (type: RuleType, value: string): RuleRow => ({ key: ++ruleKeySeed, type, value, outbound: '' })
+const ruleRow = (type: RuleType, value: string, note = ''): RuleRow => ({ key: ++ruleKeySeed, type, value, outbound: '', note })
 
 // 存下来的规则集 tag → 界面上的一行。geosite-cn 显示成 geosite + cn,
 // 其余前缀原样落到 ruleset 那一档。
-const rulesetToRow = (tag: string): RuleRow => {
+const rulesetToRow = (tag: string, note = ''): RuleRow => {
   for (const type of ['geosite', 'geoip'] as const) {
-    if (tag.startsWith(`${type}-`)) return ruleRow(type, tag.slice(type.length + 1))
+    if (tag.startsWith(`${type}-`)) return ruleRow(type, tag.slice(type.length + 1), note)
   }
-  return ruleRow('ruleset', tag)
+  return ruleRow('ruleset', tag, note)
+}
+
+// 站点集的备注挂在「类型:值」上存进 policy.notes:geosite-cn 这类规则集记成 ruleset:geosite-cn,
+// 其余是 domainSuffix:google.com 这样。前置自定义分流的备注直接存在那一行里,不走这套键。
+const noteKey = (row: RuleRow) => {
+  const value = row.value.trim()
+  if (row.type === 'geosite' || row.type === 'geoip') return `ruleset:${row.type}-${value}`
+  if (row.type === 'ruleset') return `ruleset:${value}`
+  return `${row.type}:${value}`
+}
+
+// 在域名 / IP 这几类的值框里粘贴了一串(空格、逗号、顿号隔开),自动拆成一行一个;
+// 新行沿用这一行的类型和出口,备注留在第一行
+const SPLIT_PATTERN = /[\s,，;；、]+/
+const SPLITTABLE = new Set<RuleType>(['domainSuffix', 'domain', 'domainKeyword', 'ipCidr'])
+const splitRule = (index: number) => {
+  const row = rules.value[index]
+  if (!row || !SPLITTABLE.has(row.type)) return
+  const parts = row.value.split(SPLIT_PATTERN).map((x) => x.trim()).filter(Boolean)
+  if (parts.length <= 1) {
+    row.value = parts[0] ?? ''
+    return
+  }
+  row.value = parts[0] as string
+  rules.value.splice(
+    index + 1,
+    0,
+    ...parts.slice(1).map((value) => ({ key: ++ruleKeySeed, type: row.type, value, outbound: row.outbound, note: '' })),
+  )
+}
+const splitAllRules = () => {
+  for (let i = 0; i < rules.value.length; i++) splitRule(i)
+}
+
+// 站点集里各行是「或」的关系,存的时候本来就按类型分成几个数组,所以拖完按类型归位;
+// 前置自定义分流的顺序就是匹配顺序,按拖动后的存
+const RULE_RANK: Partial<Record<RuleType, number>> = {
+  ruleUrl: 0,
+  geosite: 1,
+  geoip: 1,
+  ruleset: 1,
+  domainSuffix: 2,
+  domain: 3,
+  domainKeyword: 4,
+  ipCidr: 5,
+}
+const sortRules = () => {
+  if (editingCustom.value) return
+  const rank = (r: RuleRow) => RULE_RANK[r.type] ?? 9
+  rules.value = [...rules.value].sort((a, b) => rank(a) - rank(b))
 }
 
 const openEditor = (policy: OpenboxRoutingPolicy | null) => {
@@ -909,10 +989,11 @@ const openEditor = (policy: OpenboxRoutingPolicy | null) => {
   draft.value = policy ? JSON.parse(JSON.stringify(policy)) : { id: '', name: '', icon: '', iconScale: 0 }
   rules.value = []
   if (policy) {
-    for (const url of policy.ruleUrls || []) rules.value.push(ruleRow('ruleUrl', url))
-    for (const tag of policy.rulesets || []) rules.value.push(rulesetToRow(tag))
+    const notes = policy.notes || {}
+    for (const url of policy.ruleUrls || []) rules.value.push(ruleRow('ruleUrl', url, notes[`ruleUrl:${url}`] || ''))
+    for (const tag of policy.rulesets || []) rules.value.push(rulesetToRow(tag, notes[`ruleset:${tag}`] || ''))
     for (const type of ['domainSuffix', 'domain', 'domainKeyword', 'ipCidr'] as const) {
-      for (const value of policy[type] || []) addRule(type, value)
+      for (const value of policy[type] || []) addRule(type, value, undefined, notes[`${type}:${value}`] || '')
     }
   }
   if (!rules.value.length) addRule()
@@ -930,6 +1011,7 @@ const openCustomEditor = () => {
     type: r.type as RuleType,
     value: r.value,
     outbound: r.outbound,
+    note: r.note || '',
   }))
   if (!rules.value.length) addRule()
   void loadOutbounds()
@@ -947,6 +1029,8 @@ const persist = async (next: OpenboxRoutingPolicy[]) => {
 
 const saveDraft = async () => {
   if (!draft.value || saving.value) return
+  // 值框里粘进去没来得及拆的一串,先拆成一行一个再存
+  splitAllRules()
   const name = draft.value.name.trim()
   if (!name) {
     showNotification({ content: 'routingPolicyNameRequired', type: 'alert-error' })
@@ -988,6 +1072,7 @@ const saveDraft = async () => {
       type: r.type as OpenboxCustomRule['type'],
       value: r.value.trim(),
       outbound: r.outbound as string,
+      ...(r.note.trim() ? { note: r.note.trim() } : {}),
     }))
     saving.value = true
     try {
@@ -1025,9 +1110,12 @@ const saveDraft = async () => {
     domainKeyword: [],
     ipCidr: [],
   }
+  // 备注挂在「类型:值」上;端口那档只有前置自定义分流有,不进这里
+  const notes: Record<string, string> = {}
   for (const row of rules.value) {
     const value = row.value.trim()
     if (!value) continue
+    if (row.note.trim() && row.type !== 'port') notes[noteKey(row)] = row.note.trim()
     if (row.type === 'geosite' || row.type === 'geoip')
       collected.rulesets.push(`${row.type}-${value}`)
     else if (row.type === 'ruleset') collected.rulesets.push(value)
@@ -1051,6 +1139,7 @@ const saveDraft = async () => {
     id: draft.value.id || `policy-${Date.now()}`,
     name,
     ...collected,
+    notes,
   }
 
   saving.value = true
