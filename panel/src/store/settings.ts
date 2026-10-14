@@ -226,7 +226,7 @@ export const groupTestUrls = useStorage<
 >('config/group-test-urls', [])
 
 // connections
-export const useConnectionCard = useStorage('config/use-connecticon-card', window.innerWidth < 640)
+export const useConnectionCard = useStorage('config/use-connection-card', true)
 export const proxyChainDirection = useStorage(
   'config/proxy-chain-direction',
   PROXY_CHAIN_DIRECTION.NORMAL,
