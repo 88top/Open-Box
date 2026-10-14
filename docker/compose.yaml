@@ -1,0 +1,38 @@
+services:
+  open-box:
+    image: ${OPENBOX_IMAGE:-open-box:0.1.326}
+    restart: unless-stopped
+    stop_grace_period: 30s
+    logging:
+      driver: json-file
+      options:
+        max-size: "10m"
+        max-file: "3"
+    cap_add: [NET_ADMIN, NET_RAW]
+    devices: [/dev/net/tun:/dev/net/tun]
+    sysctls:
+      net.ipv4.ip_forward: "1"
+      net.ipv4.conf.all.send_redirects: "0"
+      net.ipv4.conf.default.send_redirects: "0"
+    environment:
+      TZ: ${TZ:-Asia/Shanghai}
+      # Empty keeps the saved port; new data volumes default to 3036.
+      OPENBOX_PANEL_PORT: "${OPENBOX_PANEL_PORT:-}"
+      OPENBOX_MASQUERADE: ${OPENBOX_MASQUERADE:-1}
+      OPENBOX_PANEL_HEAP_MB: ${OPENBOX_PANEL_HEAP_MB:-160}
+      OPENBOX_PANEL_RSS_LIMIT_MB: ${OPENBOX_PANEL_RSS_LIMIT_MB:-}
+    volumes:
+      - ./etc:/opt/open-box/etc
+      - ./data:/opt/open-box/data
+    networks:
+      lan:
+        ipv4_address: ${OPENBOX_LAN_IP:?Set OPENBOX_LAN_IP to an unused LAN address outside the DHCP pool}
+networks:
+  lan:
+    driver: ${OPENBOX_NETWORK_DRIVER:-macvlan}
+    driver_opts:
+      parent: ${OPENBOX_LAN_INTERFACE:-eth0}
+    ipam:
+      config:
+        - subnet: ${OPENBOX_LAN_SUBNET:-192.168.1.0/24}
+          gateway: ${OPENBOX_LAN_GATEWAY:-192.168.1.1}

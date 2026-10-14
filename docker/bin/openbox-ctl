@@ -1,0 +1,70 @@
+#!/bin/sh
+# 内核生命周期由这个容器内监督进程管理。网络准备/清理由现有 Debian 脚本执行，避免两份规则漂移。
+ROOT=/opt/open-box
+PID=/tmp/openbox-core.pid
+SUP=/tmp/openbox-supervisor.pid
+ENABLED="$ROOT/data/container-autostart"
+LOG=/tmp/openbox-core.log
+alive() { [ -s "$1" ] && kill -0 "$(cat "$1")" 2>/dev/null; }
+stop() {
+ if alive "$SUP"; then
+  supervisor=$(cat "$SUP")
+  kill "$supervisor" 2>/dev/null
+  count=0
+  while kill -0 "$supervisor" 2>/dev/null && [ "$count" -lt 20 ]; do sleep 1; count=$((count + 1)); done
+  if kill -0 "$supervisor" 2>/dev/null; then echo 'Kernel supervisor did not stop' >&2; return 1; fi
+ fi
+ rm -f "$SUP" "$PID"
+}
+start() {
+ alive "$SUP" && return 0
+ [ -x "$ROOT/bin/sing-box" ] && [ -s "$ROOT/etc/config.json" ] || { echo 'Kernel or configuration missing' >&2; return 1; }
+ "$0" supervise </dev/null >>"$LOG" 2>&1 &
+ printf '%s\n' "$!" > "$SUP"
+ count=0
+ while [ "$count" -lt 8 ]; do
+  alive "$PID" && return 0
+  alive "$SUP" || break
+  sleep 1; count=$((count + 1))
+ done
+ echo 'Kernel failed to start; check container logs' >&2
+ return 1
+}
+case "${1:-}" in
+ start) start;;
+ stop) stop;;
+ restart|reload) stop && start;;
+ enable) mkdir -p "$ROOT/data"; touch "$ENABLED";;
+ disable) rm -f "$ENABLED";;
+ enabled) [ -f "$ENABLED" ];;
+ status|running) if alive "$PID"; then echo running; else echo inactive; exit 3; fi;;
+ supervise)
+  child=
+  finish() {
+   trap '' TERM INT
+   [ -z "$child" ] || kill "$child" 2>/dev/null
+   [ -z "$child" ] || wait "$child" 2>/dev/null
+   "$ROOT/debian/bin/openbox-ctl" post-stop
+   rm -f "$PID" "$SUP"
+   exit 0
+  }
+  trap finish TERM INT
+  while :; do
+   if "$ROOT/debian/bin/openbox-ctl" pre-start; then
+    "$ROOT/bin/sing-box" run -D "$ROOT/data" -c "$ROOT/etc/config.json" &
+    child=$!
+    printf '%s\n' "$child" > "$PID"
+    wait "$child"
+    code=$?
+    echo "Kernel exited ($code); restarting in 2 seconds"
+    child=
+   fi
+   rm -f "$PID"
+   "$ROOT/debian/bin/openbox-ctl" post-stop
+   sleep 2 &
+   child=$!
+   wait "$child"
+   child=
+  done;;
+ *) echo "Usage: $0 {start|stop|restart|enable|disable|enabled|status}" >&2; exit 1;;
+esac

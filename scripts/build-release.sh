@@ -284,6 +284,35 @@ cp -R "$PANEL_DIR/dist" "$STAGE/panel/dist"
 log "打包面板后端 (pnpm deploy --prod)..."
 (cd "$PANEL_DIR" && corepack pnpm --filter=./server deploy --prod "$STAGE/panel/server")
 
+# arm64:仓库里的 panel/server/native 是上游 x64 应用包的(amd64)。arm64 包必须换成 arm64 的原生内核,
+# 并把 hardening-manifest.json 里的 core 和 native 两个文件的 sha256 同步改掉(Docker 构建和上游校验都按它核对)。
+# arm64 内核由 Sync upstream 从上游 arm64 应用包取来放在 scripts/native-arm64/。
+if [ "$ARCH" = arm64 ]; then
+  NATIVE_ARM64="$ROOT/scripts/native-arm64"
+  [ -f "$NATIVE_ARM64/openbox-core" ] && [ -f "$NATIVE_ARM64/core-build.json" ] \
+    || { echo "ERROR: $NATIVE_ARM64 里没有 arm64 原生内核,请先运行 Sync upstream" >&2; exit 1; }
+  log "换入 arm64 原生内核..."
+  python3 - "$STAGE/panel/server" "$NATIVE_ARM64" <<'PYARM'
+import hashlib, json, shutil, sys
+from pathlib import Path
+server = Path(sys.argv[1]); src = Path(sys.argv[2])
+core = json.loads((src / 'core-build.json').read_text())
+if core.get('os') != 'linux' or core.get('arch') != 'arm64':
+    raise SystemExit('scripts/native-arm64 里的原生内核不是 linux/arm64: ' + json.dumps(core))
+native = server / 'native'
+shutil.copyfile(src / 'openbox-core', native / 'openbox-core')
+(native / 'openbox-core').chmod(0o755)
+shutil.copyfile(src / 'core-build.json', native / 'core-build.json')
+mp = server / 'hardening-manifest.json'
+m = json.loads(mp.read_text())
+m['core'] = core
+for name in ('native/openbox-core', 'native/core-build.json'):
+    m['files'][name] = hashlib.sha256((server / name).read_bytes()).hexdigest()
+mp.write_text(json.dumps(m, indent=2, ensure_ascii=False) + '\n')
+print('arm64 原生内核已换入,buildID', core.get('buildID'))
+PYARM
+fi
+
 # 全量 Geo 快照在构建机准备，双架构 CI 使用同一份提交；设备不访问上游。
 GEO_BUNDLE="${OPENBOX_GEO_BUNDLE_DIR:-$CACHE_DIR/geodata}"
 if [ -z "${OPENBOX_GEO_BUNDLE_DIR:-}" ]; then

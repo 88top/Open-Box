@@ -1,0 +1,7 @@
+#!/bin/sh
+case "${1:-}" in
+ status|running) [ -s /tmp/openbox-panel.pid ] && kill -0 "$(cat /tmp/openbox-panel.pid)" 2>/dev/null && { echo running; exit 0; }; echo inactive; exit 3;;
+ enabled|enable|start) exit 0;;
+ restart|reload) [ -s /tmp/openbox-panel.pid ] && kill "$(cat /tmp/openbox-panel.pid)";;
+ *) echo 'The panel lifecycle is managed by Docker; use docker compose stop/restart' >&2; exit 1;;
+esac

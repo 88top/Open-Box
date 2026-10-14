@@ -1,0 +1,19 @@
+#!/bin/sh
+# 保留写入文件的 inode，轮转不需要重启内核；状态和归档只属于本容器。
+rotate() { logrotate -s /tmp/openbox-logrotate.status /opt/open-box/docker/core-logrotate.conf; }
+if [ "${1:-}" = once ]; then rotate; exit $?; fi
+sleep_pid=
+finish() {
+ trap '' TERM INT
+ [ -z "$sleep_pid" ] || kill "$sleep_pid" 2>/dev/null || true
+ [ -z "$sleep_pid" ] || wait "$sleep_pid" 2>/dev/null || true
+ exit 0
+}
+trap finish TERM INT
+while :; do
+ rotate || echo 'Kernel log rotation failed; see container logs' >&2
+ sleep 10 &
+ sleep_pid=$!
+ wait "$sleep_pid" || true
+ sleep_pid=
+done

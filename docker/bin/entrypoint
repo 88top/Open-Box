@@ -1,0 +1,64 @@
+#!/bin/sh
+set -eu
+ROOT=/opt/open-box
+export OPENBOX_PLATFORM=container OPENBOX_ROOT="$ROOT" OPENSSL_CONF=/dev/null
+export LD_LIBRARY_PATH="$ROOT/node/lib" ZASHBOARD_DB_PATH="$ROOT/data/openbox.sqlite"
+export HOST=0.0.0.0
+. "$ROOT/docker/bin/panel-port"
+. "$ROOT/docker/bin/panel-env"
+mkdir -p "$ROOT/etc" "$ROOT/data"
+printf '%s\n' "$PORT" > "$ROOT/data/panel-port"
+rm -f /tmp/openbox-core.pid /tmp/openbox-supervisor.pid /tmp/openbox-panel.pid
+[ -c /dev/net/tun ] || { echo 'Map /dev/net/tun into the container' >&2; exit 1; }
+[ "$(cat /proc/sys/net/ipv4/ip_forward)" = 1 ] || { echo 'Set net.ipv4.ip_forward=1 in Compose sysctls' >&2; exit 1; }
+for scope in all default eth0; do
+ [ "$(cat "/proc/sys/net/ipv4/conf/$scope/send_redirects")" = 0 ] || { echo "Set send_redirects=0 ($scope) in Compose" >&2; exit 1; }
+done
+# 独立容器网卡的同口转发做伪装，避免旁路由直连回程绕过容器。
+if [ "${OPENBOX_MASQUERADE:-1}" = 1 ]; then
+ if ! nft -f - <<'NFT'
+table ip openbox_docker {
+ chain postrouting {
+  type nat hook postrouting priority srcnat; policy accept;
+  meta iif != 0 oifname "eth0" masquerade
+ }
+}
+NFT
+ then
+  echo 'nftables NAT unavailable; forwarding masquerade is disabled (see container checks)' >&2
+ fi
+fi
+: > /tmp/openbox-core.log
+chmod 600 /tmp/openbox-core.log
+rm -f /tmp/openbox-core.log.1 /tmp/openbox-core.log.2 /tmp/openbox-logrotate.status
+"$ROOT/docker/bin/openbox-log-rotate" &
+rotate_pid=$!
+tail -F /tmp/openbox-core.log &
+tail_pid=$!
+panel_pid=
+shutdown() {
+ trap '' TERM INT
+ "$ROOT/docker/bin/openbox-ctl" stop || true
+ [ -z "$panel_pid" ] || kill "$panel_pid" 2>/dev/null || true
+ [ -z "$panel_pid" ] || wait "$panel_pid" 2>/dev/null || true
+ kill "$tail_pid" 2>/dev/null || true
+ kill "$rotate_pid" 2>/dev/null || true
+ wait "$rotate_pid" 2>/dev/null || true
+ rm -f /tmp/openbox-panel.pid
+ exit 0
+}
+trap shutdown TERM INT
+if "$ROOT/docker/bin/openbox-ctl" enabled; then
+ "$ROOT/docker/bin/openbox-ctl" start || echo 'Kernel autostart failed; use panel to repair configuration' >&2
+fi
+while :; do
+ "$ROOT/node/bin/node" "--max-old-space-size=$OPENBOX_PANEL_HEAP_MB" "$ROOT/panel/server/index.mjs" &
+ panel_pid=$!
+ printf '%s\n' "$panel_pid" > /tmp/openbox-panel.pid
+ wait "$panel_pid" || true
+ rm -f /tmp/openbox-panel.pid
+ panel_pid=
+ echo 'Panel exited; restarting in 2 seconds' >&2
+ sleep 2 &
+ wait $! || true
+done

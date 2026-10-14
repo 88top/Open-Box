@@ -56,6 +56,12 @@ umask 022
 
 REPO="timeflysoon/Open-Box"
 INSTALL_ROOT="/opt/open-box"
+# 获取最新升级脚本早于主流程，也需要内置镜像列表，必须先初始化。
+BUILTIN_MIRRORS="
+https://ghfast.top
+https://gh-proxy.com
+https://gh.llkk.cc
+"
 # /tmp 是 tmpfs，升级包当前约 106MB；在内核和面板运行时把它下载到 /tmp
 # 会额外消耗同等大小的运行内存，512MB 设备可能被 OOM killer 杀掉。默认改用
 # /opt 所在持久化分区，仍可通过 OPENBOX_TMPDIR 指定外接存储等其它目录。
@@ -650,9 +656,11 @@ probe_mirror_prefix() {
 # 用的环境变量意外影响到——哪怕那两个环境变量出于任何原因残留在调用者的环境里,
 # --probe/--cancel 也必须表现得像它们完全不存在一样。
 _probe_or_cancel_scan=0
+_channel_cli_scan=0
 for _a in "$@"; do
   case "$_a" in
-    --probe|--cancel) _probe_or_cancel_scan=1; break ;;
+    --probe|--cancel) _probe_or_cancel_scan=1 ;;
+    --direct|--mirror) _channel_cli_scan=1 ;;
   esac
 done
 
@@ -709,7 +717,9 @@ EXPECT_VERSION="${OPENBOX_UPDATE_EXPECT:-}"
 # 互斥检查会把 CHANNEL_OVERRIDE 非空误判成命令行传了 --direct/--mirror,平白 die()
 # 掉一次跟路线选择毫无关系的探测/取消调用。--probe/--cancel 是一次性只读调用,
 # 犯不着担这个风险,直接不读环境变量最干脆。
-if [ "$_probe_or_cancel_scan" != "1" ]; then
+# 获取最新脚本时，旧 worker 会同时留下渠道环境变量和显式参数。显式参数优先，
+# 只有不带渠道参数的 --detach 子进程才从环境读回；互斥检查仍针对命令行里的重复选择。
+if [ "$_probe_or_cancel_scan" != "1" ] && [ "$_channel_cli_scan" != "1" ]; then
   CHANNEL_OVERRIDE="${OPENBOX_UPDATE_CHANNEL_OVERRIDE:-}"
   case "$CHANNEL_OVERRIDE" in
     ''|direct|mirror) ;;
@@ -1228,7 +1238,9 @@ refresh_update_script() {
   esac
   [ -z "$EXPECT_VERSION" ] || set -- "$@" --expect "$EXPECT_VERSION"
   rm -f -- "$0"
-  OPENBOX_UPDATE_REFRESHED=1 OPENBOX_UPDATE_RELOCATED=1 OPENBOX_UPDATE_DISPATCHED=1 \
+  # argv 已完整接力，清掉旧 worker 环境记录；镜像暂存着旧脚本时也不会重复解析渠道。
+  OPENBOX_UPDATE_CHANNEL_OVERRIDE= OPENBOX_UPDATE_MIRROR_PREFIX= OPENBOX_UPDATE_EXPECT= \
+    OPENBOX_UPDATE_REFRESHED=1 OPENBOX_UPDATE_RELOCATED=1 OPENBOX_UPDATE_DISPATCHED=1 \
     exec sh "$_fresh" "$@"
 }
 
@@ -1577,11 +1589,7 @@ OLD_VERSION=$(sed -n 's/.*"version" *: *"\([^"]*\)".*/\1/p' "$INSTALL_ROOT/meta.
 # 内容一致、各自维护一份)。LuCI 渠道选择器(status.js)同样维护着这四个渠道
 # (GitHub 直连 + 这三个),UI 侧的探测最终也是调用下面 select_builtin_mirror() 复用
 # 的同一个 probe_mirror_prefix()(定义已挪到文件靠前的位置,见该函数注释)。
-BUILTIN_MIRRORS="
-https://ghfast.top
-https://gh-proxy.com
-https://gh.llkk.cc
-"
+# 列表在文件开头初始化，获取最新升级脚本与这里的包下载共用。
 
 # 依次尝试内置镜像列表,选中第一个探测通过的前缀写回 MIRROR_PREFIX;全部失败则
 # 报错退出(不触碰现有安装——此时还没开始下载正文)。用户仍可以用

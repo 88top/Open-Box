@@ -81,7 +81,9 @@ meta_field() {
 # 服务控制脚本:OpenWrt 是 /etc/init.d/<名字>;Debian / Ubuntu 是随包铺的 systemctl 包装 debian/bin/<名字>-ctl,
 # 动作集合一样(start / stop / restart / enable / disable / enabled / status)。都没有就打印空
 svc_script() {
-  if [ -x "/etc/init.d/$1" ]; then
+  if [ "${OPENBOX_PLATFORM:-}" = container ] && [ -x "$ROOT/docker/bin/$1-ctl" ]; then
+    printf '%s\n' "$ROOT/docker/bin/$1-ctl"
+  elif [ -x "/etc/init.d/$1" ]; then
     printf '%s\n' "/etc/init.d/$1"
   elif [ -x "$ROOT/debian/bin/$1-ctl" ]; then
     printf '%s\n' "$ROOT/debian/bin/$1-ctl"
@@ -163,6 +165,7 @@ cmd_check() {
 }
 
 cmd_update() {
+  if [ "${OPENBOX_PLATFORM:-}" = container ]; then echo 'Docker 版请在宿主上执行 docker compose pull && docker compose up -d' >&2; return 1; fi
   [ -f "$ROOT/update.sh" ] || { echo "找不到升级脚本:$ROOT/update.sh" >&2; return 1; }
   sh "$ROOT/update.sh" "$@"
 }
@@ -184,6 +187,7 @@ panel_running() {
 # 输出对机器友好:成功打 "port=N" 和 "restarted=yes|no",失败把原因打到 stderr 并非 0 退出 ——
 # LuCI 的「修改端口」直接把 stderr 当错误提示显示给用户。
 cmd_port() {
+  if [ "${OPENBOX_PLATFORM:-}" = container ] && [ "$#" -gt 0 ]; then echo 'Docker 版请修改 Compose 的 OPENBOX_PANEL_PORT 并重建容器' >&2; return 1; fi
   case "${1:-}" in
     '')
       openbox_current_port
@@ -315,6 +319,7 @@ cmd_restart() {
 # 那是给 LuCI 页面用的(rpcd 的 XHR 会超时),SSH 下就该看着它跑完,而且脚本要问
 # 「data/ 留不留」,得有终端。
 cmd_uninstall() {
+  if [ "${OPENBOX_PLATFORM:-}" = container ]; then echo 'Docker 版请在宿主上执行 docker compose down；挂载卷中的配置和数据将保留' >&2; return 1; fi
   [ -f "$ROOT/uninstall.sh" ] || { echo "找不到卸载脚本:$ROOT/uninstall.sh" >&2; return 1; }
   sh "$ROOT/uninstall.sh" "$@"
 }

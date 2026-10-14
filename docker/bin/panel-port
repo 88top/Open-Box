@@ -1,0 +1,13 @@
+#!/bin/sh
+# New containers use 3036; existing data volumes keep their selected port.
+if [ -n "${OPENBOX_PANEL_PORT:-}" ]; then
+ PORT=$OPENBOX_PANEL_PORT
+elif [ -s "${OPENBOX_ROOT:-/opt/open-box}/data/panel-port" ]; then
+ PORT=$(cat "${OPENBOX_ROOT:-/opt/open-box}/data/panel-port")
+else
+ PORT=3036
+fi
+case "$PORT" in ''|0*|*[!0-9]*) echo 'Invalid OPENBOX_PANEL_PORT or saved panel port' >&2; exit 1;; esac
+[ "${#PORT}" -le 5 ] && [ "$PORT" -ge 1 ] && [ "$PORT" -le 65535 ] || { echo 'Panel port must be 1–65535' >&2; exit 1; }
+case "$PORT" in 53|7853|7854|7891|9095) echo 'Panel port conflicts with kernel' >&2; exit 1;; esac
+export PORT

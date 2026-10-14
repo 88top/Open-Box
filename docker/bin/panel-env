@@ -1,0 +1,21 @@
+#!/bin/sh
+# 由 entrypoint 加载；V8 参数和 RSS 自检必须使用同一份环境设置。
+export OPENBOX_PANEL_HEAP_MB="${OPENBOX_PANEL_HEAP_MB:-160}"
+case "$OPENBOX_PANEL_HEAP_MB" in
+ *[!0-9]*|0*|'') echo 'OPENBOX_PANEL_HEAP_MB must be an integer from 64 to 4096' >&2; exit 1;;
+esac
+if [ "${#OPENBOX_PANEL_HEAP_MB}" -gt 4 ] || [ "$OPENBOX_PANEL_HEAP_MB" -lt 64 ] || [ "$OPENBOX_PANEL_HEAP_MB" -gt 4096 ]; then
+ echo 'OPENBOX_PANEL_HEAP_MB must be an integer from 64 to 4096' >&2
+ exit 1
+fi
+if [ -n "${OPENBOX_PANEL_RSS_LIMIT_MB:-}" ]; then
+ case "$OPENBOX_PANEL_RSS_LIMIT_MB" in
+  *[!0-9]*|0*) echo 'Invalid OPENBOX_PANEL_RSS_LIMIT_MB' >&2; exit 1;;
+ esac
+ # 留出 Node 堆外空间，防止 RSS 上限比正常 V8 水位还低造成反复重启。
+ if [ "${#OPENBOX_PANEL_RSS_LIMIT_MB}" -gt 5 ] || [ "$OPENBOX_PANEL_RSS_LIMIT_MB" -lt 120 ] || [ "$OPENBOX_PANEL_RSS_LIMIT_MB" -lt "$((OPENBOX_PANEL_HEAP_MB + 64))" ]; then
+  echo 'OPENBOX_PANEL_RSS_LIMIT_MB must be at least 120 and at least heap + 64' >&2
+  exit 1
+ fi
+ export OPENBOX_PANEL_RSS_LIMIT_MB
+fi
