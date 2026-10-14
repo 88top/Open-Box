@@ -1,6 +1,6 @@
 services:
   open-box:
-    image: ${OPENBOX_IMAGE:-open-box:0.1.326}
+    image: ${OPENBOX_IMAGE:-open-box:0.1.327}
     restart: unless-stopped
     stop_grace_period: 30s
     logging:
