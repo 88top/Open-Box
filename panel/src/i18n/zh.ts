@@ -752,7 +752,7 @@ const zh: LANG_MESSAGE = {
   routingFallbackNoDisable: '兜底站点集不能停用',
   routingFallbackNoDelete: '兜底站点集不能删除',
   routingFallbackEditTitle: '修改兜底站点集',
-  routingFallbackEditHint: '名字就是内核里的出站名,改名后代理页上原来选的线路要重新选一次;重启内核后生效。',
+  routingFallbackEditHint: '名字就是内核里的出站名,改名后代理页上原来选的线路要重新选一次。',
   routingPolicyAdd: '添加站点集',
   routingPolicyAddTitle: '添加站点集',
   routingPolicyEditTitle: '修改站点集',

@@ -773,7 +773,7 @@ const en = {
   routingFallbackNoDisable: 'The fallback site set cannot be disabled',
   routingFallbackNoDelete: 'The fallback site set cannot be deleted',
   routingFallbackEditTitle: 'Edit fallback site set',
-  routingFallbackEditHint: 'The name is the outbound tag in the kernel; after renaming, re-pick its line on the Proxies page. Takes effect after a kernel restart.',
+  routingFallbackEditHint: 'The name is the outbound tag in the kernel; after renaming, re-pick its line on the Proxies page.',
   routingPolicyAdd: 'Add site set',
   routingPolicyAddTitle: 'Add site set',
   routingPolicyEditTitle: 'Edit site set',

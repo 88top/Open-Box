@@ -772,7 +772,7 @@ const zhTW: LANG_MESSAGE = {
   routingFallbackNoDisable: '兜底站點集不能停用',
   routingFallbackNoDelete: '兜底站點集不能刪除',
   routingFallbackEditTitle: '修改兜底站點集',
-  routingFallbackEditHint: '名字就是核心裡的出站名,改名後代理頁上原來選的線路要重新選一次;重啟核心後生效。',
+  routingFallbackEditHint: '名字就是核心裡的出站名,改名後代理頁上原來選的線路要重新選一次。',
   routingPolicyAdd: '新增站點集',
   routingPolicyAddTitle: '新增站點集',
   routingPolicyEditTitle: '修改站點集',
