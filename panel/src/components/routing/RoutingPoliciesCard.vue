@@ -219,6 +219,7 @@
       v-model="showFallbackEditor"
       :title="$t('routingFallbackEditTitle')"
       box-class="w-full max-w-2xl"
+      footer-class="mx-4 px-0!"
     >
       <div
         v-if="fallbackDraft"
