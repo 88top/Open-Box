@@ -1358,7 +1358,7 @@ const zhTW: LANG_MESSAGE = {
   clientRouteOutboundLabel: '出站',
   clientRouteOutboundBuiltin: '內建',
   clientRouteOutboundGroups: '節點組',
-  clientRouteHint: '這些終端的全部流量都走這裡選的出站,優先級高於站點集;區域網路目標仍直連。儲存後重啟核心生效。',
+  clientRouteHint: '這些終端的全部流量都走這裡選的出站,優先級高於站點集;區域網路目標仍直連。',
   clientRouteErrName: '名稱不能為空',
   clientRouteErrSources: '無效的 IP / 網段:{value}',
   clientRouteErrNoSources: '至少填一個終端',

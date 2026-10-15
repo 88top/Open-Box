@@ -1360,7 +1360,7 @@ const en = {
   clientRouteOutboundLabel: 'Outbound',
   clientRouteOutboundBuiltin: 'Built-in',
   clientRouteOutboundGroups: 'Node groups',
-  clientRouteHint: 'All traffic from these clients goes to the chosen outbound, ahead of site-set rules. LAN destinations still go direct. Restart the kernel after saving.',
+  clientRouteHint: 'All traffic from these clients goes to the chosen outbound, ahead of site-set rules. LAN destinations still go direct.',
   clientRouteErrName: 'Name is required',
   clientRouteErrSources: 'Invalid IP / CIDR: {value}',
   clientRouteErrNoSources: 'At least one client is required',

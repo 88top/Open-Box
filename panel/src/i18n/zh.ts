@@ -1358,7 +1358,7 @@ const zh: LANG_MESSAGE = {
   clientRouteOutboundLabel: '出站',
   clientRouteOutboundBuiltin: '内置',
   clientRouteOutboundGroups: '节点组',
-  clientRouteHint: '这些终端的全部流量都走这里选的出站,优先级高于站点集;局域网目标仍直连。保存后重启内核生效。',
+  clientRouteHint: '这些终端的全部流量都走这里选的出站,优先级高于站点集;局域网目标仍直连。',
   clientRouteErrName: '名称不能为空',
   clientRouteErrSources: '无效的 IP / 网段:{value}',
   clientRouteErrNoSources: '至少填一个终端',
