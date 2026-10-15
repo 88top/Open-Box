@@ -251,28 +251,30 @@
           </div>
         </div>
         <p class="text-base-content/50 text-xs">{{ $t('routingFallbackEditHint') }}</p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showFallbackEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveFallback"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('save') }}
-          </button>
-        </div>
       </div>
+
+      <!-- 取消 / 保存固定在底栏,和修改站点集弹窗一致 -->
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showFallbackEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveFallback"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('save') }}
+        </button>
+      </template>
     </DialogWrapper>
 
     <!-- 删掉一个站点集会连带删掉内核里那个同名 selector(代理页上就没了),先确认一次 -->
