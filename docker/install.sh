@@ -6,12 +6,12 @@ help() {
  cat <<'HELP'
 Open-Box Docker 一键安装（新装默认端口 3036）
   sh install.sh [--ip 未占用的LAN地址]
-  sh install.sh --offline --image open-box:0.1.329 --ip 192.168.1.2
+  sh install.sh --offline --image open-box:0.1.330 --ip 192.168.1.2
   sh install.sh --offline --archive 镜像.tar.gz --ip 192.168.1.2
 选项：
   --interface 网卡  --subnet 网段/CIDR  --gateway 主路由IP
   --driver macvlan|ipvlan  --network 网络名  --name 容器名
-  --port 3036  --dir /opt/open-box-docker  --version latest|v0.1.329
+  --port 3036  --dir /opt/open-box-docker  --version latest|v0.1.330
   --image 已加载镜像  --archive 离线镜像（必须附带同名.sha256）
   --offline 禁止下载；已有配置、数据、端口在重复安装时保留。
 HELP
