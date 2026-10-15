@@ -167,7 +167,7 @@
     <DialogWrapper
       v-model="showEditor"
       :title="$t(editing?.id ? 'groupEditTitle' : 'groupAddTitle')"
-      box-class="w-full max-w-4xl"
+      box-class="w-full max-w-4xl h-[90dvh] max-md:h-dvh max-md:max-h-dvh max-md:min-h-dvh max-md:w-screen max-md:max-w-none max-md:rounded-none max-md:m-0"
     >
       <!-- 取消 / 保存放在底栏:内容再长也只滚中间那块,按钮始终在弹窗底部 -->
       <template #footer>
