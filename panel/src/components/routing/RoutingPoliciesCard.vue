@@ -402,7 +402,7 @@
             <Bars3Icon class="drag-handle text-base-content/40 h-4 w-4 shrink-0 cursor-move" />
             <select
               v-model="rule.type"
-              class="select select-sm w-48 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
+              class="select select-sm w-[9.875rem] shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
             >
               <option
                 v-for="opt in ruleTypeOptions(rule.type)"
