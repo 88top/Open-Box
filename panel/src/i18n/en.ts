@@ -2,6 +2,7 @@ import { dnsFilterEn } from './dns-filter'
 import { dnsPageEn } from './dns-page'
 import { subscriptionDnsEn } from './subscription-dns'
 import { factoryResetEn } from './factory-reset'
+import { clientAppRegionDialogEn } from './client-app-region-dialog'
 const en = {
   chainProxyAdd: 'Add chain proxy',
   chainProxyNameLabel: 'Name',
@@ -1422,10 +1423,7 @@ const en = {
   clientAppResetConfirm: 'Restore the three default groups? Your custom groups will be overwritten.',
   clientAppGroupName: 'Name',
   clientAppGroupDesc: 'Description',
-  clientAppGroupRegions: 'Regions (two-letter country codes, space or comma separated)',
   clientAppRegionMatch: 'Used when',
-  clientAppMatchInside: 'Inside these regions',
-  clientAppMatchOutside: 'Outside these regions',
   clientAppCatchAll: 'Everything else',
   clientAppActionDirect: 'Direct',
   clientAppActionProxy: 'Back to router',
@@ -1497,6 +1495,7 @@ const en = {
   ...dnsPageEn,
   ...subscriptionDnsEn,
   ...factoryResetEn,
+  ...clientAppRegionDialogEn,
 }
 
 export type LANG_MESSAGE = typeof en

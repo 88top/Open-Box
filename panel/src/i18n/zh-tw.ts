@@ -5,6 +5,7 @@ import { kernelSettingsZhTw } from './kernel-settings'
 import { clientAppPageZhTw } from './client-app-page-tw'
 import { subscriptionDnsZhTw } from './subscription-dns'
 import { factoryResetZhTw } from './factory-reset'
+import { clientAppRegionDialogZhTw } from './client-app-region-dialog'
 
 const zhTW: LANG_MESSAGE = {
   chainProxyAdd: '新增鏈式代理',
@@ -1419,10 +1420,7 @@ const zhTW: LANG_MESSAGE = {
   clientAppResetConfirm: '恢復預設三組?自訂的分組會被覆蓋。',
   clientAppGroupName: '名稱',
   clientAppGroupDesc: '說明',
-  clientAppGroupRegions: '地區(兩位國家代碼,空格或逗號分隔)',
   clientAppRegionMatch: '何時使用',
-  clientAppMatchInside: '在這些地區時',
-  clientAppMatchOutside: '在這些地區之外時',
   clientAppCatchAll: '其餘流量',
   clientAppActionDirect: '本機直連',
   clientAppActionProxy: '回路由器',
@@ -1469,6 +1467,7 @@ const zhTW: LANG_MESSAGE = {
   ...clientAppPageZhTw,
   ...subscriptionDnsZhTw,
   ...factoryResetZhTw,
+  ...clientAppRegionDialogZhTw,
 }
 
 export default zhTW

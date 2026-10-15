@@ -3,7 +3,7 @@
   <DialogWrapper
     v-model="isOpen"
     :title="$t(group ? 'clientAppEditGroup' : 'clientAppAddGroupTitle')"
-    box-class="w-full max-w-4xl"
+    box-class="h-[90dvh] w-full max-w-4xl"
   >
     <div
       v-if="form"
@@ -11,7 +11,7 @@
     >
       <div
         role="tablist"
-        class="tabs-box tabs tabs-sm"
+        class="tabs-box tabs tabs-xs w-fit"
       >
         <a
           v-for="item in TABS"
@@ -37,6 +37,7 @@
             type="text"
             class="input input-sm w-full"
             :maxlength="SHARE_REGION_LIMITS.nameMax"
+            :placeholder="$t('clientAppGroupNamePlaceholder')"
           />
         </div>
         <div class="flex flex-col gap-1">
@@ -46,11 +47,12 @@
             rows="2"
             class="textarea textarea-sm w-full"
             :maxlength="SHARE_REGION_LIMITS.descriptionMax"
+            :placeholder="$t('clientAppGroupDescPlaceholder')"
           />
         </div>
 
-        <div class="flex flex-col gap-2">
-          <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-col gap-1">
+          <div class="flex items-center gap-2">
             <label class="text-xs font-medium">{{ $t('clientAppGroupRegions') }}</label>
             <div
               role="tablist"
@@ -73,7 +75,7 @@
                 {{ $t('clientAppMatchOutside') }}
               </a>
             </div>
-            <div class="w-52">
+            <div class="ml-auto w-40">
               <CountrySelect
                 model-value=""
                 :placeholder="$t('clientAppAddRegion')"
@@ -81,10 +83,10 @@
               />
             </div>
           </div>
-          <div class="flex flex-wrap items-center gap-1.5">
+          <div class="border-base-content/10 flex max-h-48 min-h-11 flex-wrap content-start items-center gap-1.5 overflow-y-auto rounded-lg border p-2">
             <p
               v-if="!form.regions.length"
-              class="text-base-content/50 text-xs"
+              class="text-base-content/50 w-full text-center text-xs"
             >
               {{ $t('clientAppNoRegion') }}
             </p>
@@ -109,10 +111,13 @@
               </button>
             </span>
           </div>
+          <p class="text-base-content/50 text-xs">
+            {{ $t(form.regionMatch === 'outside' ? 'clientAppRegionsHintOutside' : 'clientAppRegionsHintInside') }}
+          </p>
         </div>
 
         <div class="flex flex-col gap-1">
-          <label class="flex cursor-pointer items-center gap-2">
+          <label class="flex w-fit cursor-pointer items-center gap-3">
             <input
               v-model="form.isDefault"
               type="checkbox"
@@ -313,28 +318,30 @@
         <p class="text-base-content/50 text-xs">{{ $t('clientAppDnsHint') }}</p>
       </div>
 
-      <div class="flex justify-end gap-2">
-        <button
-          type="button"
-          class="btn btn-sm"
-          @click="isOpen = false"
-        >
-          {{ $t('cancel') }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary btn-sm"
-          :disabled="saving"
-          @click="submit"
-        >
-          <span
-            v-if="saving"
-            class="loading loading-spinner loading-xs"
-          />
-          {{ $t('save') }}
-        </button>
-      </div>
     </div>
+
+    <!-- 底栏:取消 / 保存固定在内容区下面,与 v0.1.331 一致 -->
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-sm"
+        @click="isOpen = false"
+      >
+        {{ $t('cancel') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-primary btn-sm"
+        :disabled="saving"
+        @click="submit"
+      >
+        <span
+          v-if="saving"
+          class="loading loading-spinner loading-xs"
+        />
+        {{ $t('save') }}
+      </button>
+    </template>
   </DialogWrapper>
 </template>
 

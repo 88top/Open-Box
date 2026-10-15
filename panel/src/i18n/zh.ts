@@ -5,6 +5,7 @@ import { kernelSettingsZh } from './kernel-settings'
 import { clientAppPageZh } from './client-app-page'
 import { subscriptionDnsZh } from './subscription-dns'
 import { factoryResetZh } from './factory-reset'
+import { clientAppRegionDialogZh } from './client-app-region-dialog'
 
 const zh: LANG_MESSAGE = {
   ...dnsFilterZh,
@@ -1410,10 +1411,7 @@ const zh: LANG_MESSAGE = {
   clientAppResetConfirm: '恢复默认三组?自定义的分组会被覆盖。',
   clientAppGroupName: '名称',
   clientAppGroupDesc: '说明',
-  clientAppGroupRegions: '地区(两位国家代码,空格或逗号分隔)',
   clientAppRegionMatch: '何时使用',
-  clientAppMatchInside: '在这些地区时',
-  clientAppMatchOutside: '在这些地区之外时',
   clientAppCatchAll: '其余流量',
   clientAppActionDirect: '本地直连',
   clientAppActionProxy: '回路由器',
@@ -1459,6 +1457,7 @@ const zh: LANG_MESSAGE = {
   ...clientAppPageZh,
   ...subscriptionDnsZh,
   ...factoryResetZh,
+  ...clientAppRegionDialogZh,
 }
 
 export default zh
