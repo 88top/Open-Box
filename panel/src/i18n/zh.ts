@@ -56,7 +56,7 @@ const zh: LANG_MESSAGE = {
   settings: '设置',
   speedtestUrl: '测速地址',
   directTestUrl: '直连测速地址',
-  groupTestUrlPlaceholder: '留空 = 用「分流与策略 → 其他」里的全局地址',
+  groupTestUrlPlaceholder: '留空 = 用「后端设置 → 测速地址」里的全局地址',
   groupTestUrl: '测速地址',
   directTestUrlHint: '只给内置直连用；支持 HTTP / HTTPS，默认使用 HTTP。',
   testUrlHint: '自动择优、手动测速和故障转移使用；支持 HTTP / HTTPS，默认使用 HTTP。',
