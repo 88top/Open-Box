@@ -745,7 +745,7 @@ const zh: LANG_MESSAGE = {
   routingCustomNoDelete: '前置自定义分流是固定的一条,不能删除;不用时可以停用。',
   routingCustomEditTitle: '修改前置自定义分流',
   routingCustomOutboundRequired: '每条规则都要选一个出口。',
-  routingCustomRulesHint: '一行一条,每行自己选出口(可直接选节点)。优先级最高,排在所有站点集之前,从上到下先命中先生效。',
+  routingCustomRulesHint: '一行一条,每行自己选出口（可直接选节点）。优先级最高,排在所有站点集之前,从上到下先命中先生效。IP 只管 IP、域名只管域名:IP 段 / geoip 行只管直接按 IP 发起的连接,按域名访问要写域名行。',
   routingCustomNoRule: '还没有规则(这条不生效)',
   routingFallbackBadge: '系统兜底',
   routingFallbackHint: '上面都没命中的流量走它。在「代理」页选它走哪条线路。',
