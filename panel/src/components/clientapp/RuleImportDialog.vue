@@ -4,6 +4,8 @@
     v-model="isOpen"
     :title="$t('routingPolicyRuleImportTitle')"
     box-class="w-full max-w-2xl"
+    header-class="mx-4 px-0! [&>button]:right-[-0.5rem]!"
+    footer-class="mx-4 px-0!"
   >
     <div class="flex flex-col gap-3">
       <p class="text-base-content/60 text-xs">{{ $t(hintKey, { max }) }}</p>
@@ -66,25 +68,27 @@
           </ul>
         </div>
       </template>
-      <div class="flex justify-end gap-2">
-        <button
-          type="button"
-          class="btn btn-sm"
-          @click="isOpen = false"
-        >
-          {{ $t('cancel') }}
-        </button>
-        <button
-          v-if="entries"
-          type="button"
-          class="btn btn-primary btn-sm"
-          :disabled="!entries.length || entries.length > max"
-          @click="apply"
-        >
-          {{ $t('routingPolicyRuleImportApply') }}
-        </button>
-      </div>
     </div>
+
+    <!-- 底栏:取消 / 导入固定在内容区下面,与 v0.1.334 一致 -->
+    <template #footer>
+      <button
+        type="button"
+        class="btn btn-sm"
+        @click="isOpen = false"
+      >
+        {{ $t('cancel') }}
+      </button>
+      <button
+        v-if="entries"
+        type="button"
+        class="btn btn-primary btn-sm"
+        :disabled="!entries.length || entries.length > max"
+        @click="apply"
+      >
+        {{ $t('routingPolicyRuleImportApply') }}
+      </button>
+    </template>
   </DialogWrapper>
 </template>
 
