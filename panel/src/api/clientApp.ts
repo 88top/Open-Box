@@ -202,6 +202,65 @@ export type OpenboxClientBundle = Record<string, unknown>
 export const fetchClientConfigFile = () =>
   requestJson<OpenboxClientBundle>('/api/openbox/client-config/file')
 
+// ---- 内容过滤(规则集和脚本快照存在路由器上,同步到 iOS 后在手机执行)----
+// 接口形态取自 v0.1.334 面板的调用。新增 / 启停 / 删除都返回整份最新列表。
+
+export type OpenboxContentFilterDialect =
+  | 'surge'
+  | 'quantumultx'
+  | 'loon'
+  | 'shadowrocket'
+  | 'stash'
+
+export interface OpenboxContentFilterSet {
+  id: string
+  name: string
+  dialect: OpenboxContentFilterDialect
+  sourceUrl?: string
+  enabled: boolean
+  ruleCount: number
+  scriptCount: number
+  skipped?: number
+  updatedAt: string
+  arguments?: { values?: Record<string, unknown> }
+}
+
+export interface OpenboxContentFilterList {
+  sets: OpenboxContentFilterSet[]
+  sha256: string
+  size: number
+}
+
+export interface OpenboxContentFilterInput {
+  id?: string
+  name: string
+  dialect: OpenboxContentFilterDialect
+  sourceUrl?: string
+  text?: string
+  arguments?: Record<string, unknown>
+}
+
+export const fetchContentFilter = () =>
+  requestJson<OpenboxContentFilterList>('/api/openbox/content-filter')
+
+export const fetchContentFilterSource = (id: string) =>
+  requestJson<{ text: string }>(`/api/openbox/content-filter/${id}/source`)
+
+export const saveContentFilter = (input: OpenboxContentFilterInput) =>
+  requestJson<OpenboxContentFilterList>('/api/openbox/content-filter', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+
+export const setContentFilterEnabled = (id: string, enabled: boolean) =>
+  requestJson<OpenboxContentFilterList>(`/api/openbox/content-filter/${id}`, {
+    method: 'PATCH',
+    body: JSON.stringify({ enabled }),
+  })
+
+export const deleteContentFilter = (id: string) =>
+  requestJson<OpenboxContentFilterList>(`/api/openbox/content-filter/${id}`, { method: 'DELETE' })
+
 // ---- 激活(server/api/activation.mjs)----
 // 概览页顶栏默认放站点推广;输入内置激活码后顶栏左右两边换成自己填的文字(留空 = 默认的版本号)。
 // 状态存在路由器上。后端用 400 回「激活码不对」{ error: 'invalid activation code' } 和「还没激活」{ error: 'not activated' }。
