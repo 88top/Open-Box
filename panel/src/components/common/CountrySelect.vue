@@ -2,18 +2,19 @@
   <!-- 带搜索的图标/国家选择器。不用原生 <select>:它既放不下国旗,也没法打字筛选。
        面板 Teleport 到 #app-content 并用 fixed 定位(见 composables/anchoredDropdown.ts)
        ——留在原地会被弹窗的 overflow 裁掉,只露出上面一小截。 -->
-  <div class="w-full">
+  <div :class="iconOnly ? 'w-auto shrink-0' : 'w-full'">
     <div
       ref="triggerRef"
       tabindex="0"
       role="button"
-      class="input input-sm hover:border-base-content/30 flex w-full cursor-pointer items-center gap-1.5"
+      class="input input-sm hover:border-base-content/30 flex cursor-pointer items-center gap-1.5"
+      :class="iconOnly ? 'w-16 justify-center px-2' : 'w-full'"
       @click="toggle"
       @keydown.enter.prevent="toggle"
     >
       <CountryFlag
         :code="modelValue || placeholderFlag"
-        :size="16"
+        :size="iconOnly ? 20 : 16"
         :title="label"
       />
       <span

@@ -7,7 +7,7 @@
 
       <div class="flex flex-wrap items-end gap-2">
         <div class="flex min-w-[14rem] flex-1 items-end gap-2">
-          <div class="flex w-[4.5rem] shrink-0 flex-col gap-1">
+          <div class="flex shrink-0 flex-col gap-1">
             <label class="text-xs font-medium">{{ $t('clientAppServerIcon') }}</label>
             <CountrySelect
               :model-value="form.icon"
