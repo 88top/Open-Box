@@ -62,7 +62,7 @@
                 role="tab"
                 class="tab"
                 :class="form.regionMatch === 'inside' && 'tab-active'"
-                @click="form.regionMatch = 'inside'"
+                @click="setMatch('inside')"
               >
                 {{ $t('clientAppMatchInside') }}
               </a>
@@ -70,7 +70,7 @@
                 role="tab"
                 class="tab"
                 :class="form.regionMatch === 'outside' && 'tab-active'"
-                @click="form.regionMatch = 'outside'"
+                @click="setMatch('outside')"
               >
                 {{ $t('clientAppMatchOutside') }}
               </a>
@@ -292,89 +292,12 @@
         />
       </div>
 
-      <!-- DNS:直连 / 代理各一条主上游 + 备用 -->
-      <div
-        v-show="tab === 'dns'"
-        class="flex flex-col gap-3"
-      >
-        <div
-          v-for="side in SIDES"
-          :key="side"
-          class="flex flex-col gap-1"
-        >
-          <span class="text-base-content/60 text-xs">
-            {{ $t(side === 'direct' ? 'clientAppDnsDirect' : 'clientAppDnsProxy') }}
-          </span>
-          <div class="flex flex-wrap items-center gap-1">
-            <input
-              :value="main(side).server"
-              type="text"
-              class="input input-sm min-w-0 flex-1 font-mono text-xs"
-              :placeholder="$t('clientAppDnsServerPlaceholder')"
-              @input="setMain(side, 'server', ($event.target as HTMLInputElement).value)"
-            />
-            <select
-              class="select select-sm w-20"
-              :value="main(side).protocol"
-              :disabled="main(side).server === 'wan'"
-              @change="setMain(side, 'protocol', ($event.target as HTMLSelectElement).value)"
-            >
-              <option value="udp">UDP</option>
-              <option value="tcp">TCP</option>
-            </select>
-            <input
-              :value="main(side).port"
-              type="number"
-              min="1"
-              max="65535"
-              class="input input-sm w-24"
-              :disabled="main(side).server === 'wan'"
-              @input="setMain(side, 'port', Number(($event.target as HTMLInputElement).value))"
-            />
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs"
-              @click="addExtra(side)"
-            >
-              <PlusIcon class="h-3.5 w-3.5" />
-              {{ $t('clientAppDnsAddBackup') }}
-            </button>
-          </div>
-          <div
-            v-for="(x, xi) in extrasOf(side)"
-            :key="xi"
-            class="flex flex-wrap items-center gap-1 pl-4"
-          >
-            <input
-              v-model="x.server"
-              type="text"
-              class="input input-sm min-w-0 flex-1 font-mono text-xs"
-              :placeholder="$t('clientAppDnsServerPlaceholder')"
-            />
-            <select
-              v-model="x.protocol"
-              class="select select-sm w-20"
-            >
-              <option value="udp">UDP</option>
-              <option value="tcp">TCP</option>
-            </select>
-            <input
-              v-model.number="x.port"
-              type="number"
-              min="1"
-              max="65535"
-              class="input input-sm w-24"
-            />
-            <button
-              type="button"
-              class="btn btn-ghost btn-square btn-sm"
-              @click="extrasOf(side).splice(xi, 1)"
-            >
-              <TrashIcon class="h-4 w-4" />
-            </button>
-          </div>
-        </div>
-        <p class="text-base-content/50 text-xs">{{ $t('clientAppDnsHint') }}</p>
+      <!-- DNS:直连 / 代理各一行(设计和路由器「DNS 设置」页的 DNS 上游一致),含中国大陆的组代理侧不能用系统 DNS -->
+      <div v-show="tab === 'dns'">
+        <ShareRegionDnsList
+          v-model="form.dns"
+          :in-cn="inCn"
+        />
       </div>
 
     </div>
@@ -407,19 +330,20 @@
 <script setup lang="ts">
 import {
   SHARE_REGION_LIMITS,
-  type OpenboxShareDnsUpstream,
   type OpenboxShareGroupDns,
   type OpenboxShareRegionGroup,
   type OpenboxShareRule,
   type OpenboxShareRuleType,
 } from '@/api/clientApp'
 import RuleImportDialog from '@/components/clientapp/RuleImportDialog.vue'
+import ShareRegionDnsList from '@/components/clientapp/ShareRegionDnsList.vue'
 import CountryFlag from '@/components/common/CountryFlag.vue'
 import CountrySelect from '@/components/common/CountrySelect.vue'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import GeoRuleValue from '@/components/routing/GeoRuleValue.vue'
 import RuleUrlValue from '@/components/routing/RuleUrlValue.vue'
 import { countryName, findCountry } from '@/constant/countries'
+import { WAN_UPSTREAM, regionDnsDefaults } from '@/constant/shareRegionDns'
 import { showNotification } from '@/helper/notification'
 import {
   Bars3Icon,
@@ -432,7 +356,6 @@ import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
 import Draggable from 'vuedraggable'
 
-type Side = 'direct' | 'proxy'
 type Tab = 'name' | 'rules' | 'dns'
 // 规则行要一个稳定的 key 给拖动排序用:类型和值都会被改,不能拿它们当 key
 type RuleRow = OpenboxShareRule & { key: number }
@@ -470,7 +393,6 @@ const isOpen = computed({
   set: (v: boolean) => emit('update:modelValue', v),
 })
 
-const SIDES: Side[] = ['direct', 'proxy']
 const TABS: { key: Tab; label: string }[] = [
   { key: 'name', label: 'clientAppTabBasic' },
   { key: 'rules', label: 'clientAppTabRules' },
@@ -488,23 +410,6 @@ const newId = () => {
     const id = `g${Math.random().toString(36).slice(2, 8)}`
     if (!used.has(id)) return id
   }
-}
-
-// 新建时 DNS 先抄默认「其他地区」那一组(两侧都是系统 DNS);没有就给个能过校验的
-const blankDns = (): OpenboxShareGroupDns => {
-  const template = props.defaults.find((g) => g.id === 'other')
-  return template
-    ? clone(template.dns)
-    : {
-        direct: 'wan',
-        directProtocol: 'udp',
-        directPort: 53,
-        directExtras: [],
-        proxy: 'wan',
-        proxyProtocol: 'udp',
-        proxyPort: 53,
-        proxyExtras: [],
-      }
 }
 
 watch(
@@ -534,7 +439,7 @@ watch(
           isDefault: false,
           rules: [],
           catchAll: 'direct',
-          dns: blankDns(),
+          dns: regionDnsDefaults('intl'),
         }
   },
   { immediate: true },
@@ -545,16 +450,43 @@ const regionName = (code: string) => {
   return c ? countryName(c, locale.value) : code
 }
 
+// 这一组含不含中国大陆:「在这些地区」里有 CN,或「在这些地区之外」里没有 CN
+const inCnOf = (f: Form) => (f.regionMatch === 'outside' ? !f.regions.includes('CN') : f.regions.includes('CN'))
+const inCn = computed(() => (form.value ? inCnOf(form.value) : false))
+
+// 地区一改,DNS 还是旧预设的就跟着换成新预设(用户自己改过的不动)
+const syncDnsPreset = (was: boolean) => {
+  const f = form.value
+  if (!f) return
+  const now = inCnOf(f)
+  if (now !== was && JSON.stringify(f.dns) === JSON.stringify(regionDnsDefaults(was ? 'cn' : 'intl'))) {
+    f.dns = regionDnsDefaults(now ? 'cn' : 'intl')
+  }
+}
+
 const addRegion = (code: string) => {
   const f = form.value
   const upper = String(code || '').trim().toUpperCase()
   if (!f || !upper || f.regions.includes(upper)) return
+  const was = inCnOf(f)
   f.regions.push(upper)
+  syncDnsPreset(was)
 }
 
 const removeRegion = (code: string) => {
   const f = form.value
-  if (f) f.regions = f.regions.filter((c) => c !== code)
+  if (!f) return
+  const was = inCnOf(f)
+  f.regions = f.regions.filter((c) => c !== code)
+  syncDnsPreset(was)
+}
+
+const setMatch = (match: 'inside' | 'outside') => {
+  const f = form.value
+  if (!f || f.regionMatch === match) return
+  const was = inCnOf(f)
+  f.regionMatch = match
+  syncDnsPreset(was)
 }
 
 // ---- 规则 ----
@@ -678,40 +610,6 @@ const onImport = (entries: { type: string; value: string }[]) => {
   ]
 }
 
-// ---- DNS ----
-
-const main = (side: Side): OpenboxShareDnsUpstream => {
-  const d = form.value!.dns
-  return side === 'direct'
-    ? { server: d.direct, protocol: d.directProtocol, port: d.directPort }
-    : { server: d.proxy, protocol: d.proxyProtocol, port: d.proxyPort }
-}
-
-const setMain = (side: Side, key: 'server' | 'protocol' | 'port', value: string | number) => {
-  const d = form.value!.dns
-  if (key === 'server') {
-    const server = String(value).trim()
-    if (side === 'direct') d.direct = server
-    else d.proxy = server
-    // 系统 DNS 固定 UDP 53
-    if (server === 'wan') {
-      if (side === 'direct') [d.directProtocol, d.directPort] = ['udp', 53]
-      else [d.proxyProtocol, d.proxyPort] = ['udp', 53]
-    }
-  } else if (key === 'protocol') {
-    if (side === 'direct') d.directProtocol = String(value)
-    else d.proxyProtocol = String(value)
-  } else if (side === 'direct') d.directPort = Number(value)
-  else d.proxyPort = Number(value)
-}
-
-const extrasOf = (side: Side): OpenboxShareDnsUpstream[] =>
-  side === 'direct' ? form.value!.dns.directExtras : form.value!.dns.proxyExtras
-
-const addExtra = (side: Side) => {
-  extrasOf(side).push({ server: '', protocol: side === 'direct' ? 'udp' : 'tcp', port: 53 })
-}
-
 // ---- 提交 ----
 
 const submit = () => {
@@ -726,6 +624,11 @@ const submit = () => {
   if (f.regionMatch === 'outside' && !f.regions.length) {
     tab.value = 'name'
     showNotification({ content: 'clientAppErrOutside', params: { id: f.id }, type: 'alert-error' })
+    return
+  }
+  if (inCnOf(f) && [f.dns.proxy, ...f.dns.proxyExtras.map((x) => x.server)].includes(WAN_UPSTREAM)) {
+    tab.value = 'dns'
+    showNotification({ content: 'shareRegionsDnsSystemNotInCn', type: 'alert-error' })
     return
   }
   for (let i = 0; i < f.rules.length; i++) splitRuleRow(i)
@@ -751,11 +654,7 @@ const submit = () => {
     ...(f.isDefault ? { default: true } : {}),
     rules,
     catchAll: f.catchAll,
-    dns: {
-      ...f.dns,
-      directExtras: f.dns.directExtras.filter((x) => x.server.trim()),
-      proxyExtras: f.dns.proxyExtras.filter((x) => x.server.trim()),
-    },
+    dns: f.dns,
   }
   emit('saved', group)
 }
