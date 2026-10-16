@@ -139,87 +139,132 @@
           <p class="text-base-content/60 text-xs">
             {{ $t(form.rules.length || lanSubnets.length ? 'clientAppRulesHint' : 'clientAppNoRules') }}
           </p>
-          <button
-            type="button"
-            class="btn btn-ghost btn-xs"
-            :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
-            @click="addRule"
-          >
-            <PlusIcon class="h-3.5 w-3.5" />
-            {{ $t('clientAppAddRule') }}
-          </button>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
+              @click="showImport = true"
+            >
+              {{ $t('routingPolicyRuleImport') }}
+            </button>
+            <button
+              type="button"
+              class="btn btn-ghost btn-xs"
+              :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
+              @click="addRule"
+            >
+              <PlusIcon class="h-3.5 w-3.5" />
+              {{ $t('clientAppAddRule') }}
+            </button>
+          </div>
         </div>
 
-        <!-- 路由器自动加的「家里局域网 → 回路由器」,只读 -->
+        <!-- 路由器自动加的「家里局域网 → 经路由器」,只读(规则里已经有同一网段就不重复显示) -->
         <div
-          v-for="subnet in lanSubnets"
+          v-for="subnet in lanRows"
           :key="subnet"
           class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
         >
-          <InformationCircleIcon
+          <LockClosedIcon
             v-tip="$t('clientAppLanRuleTip')"
             class="text-base-content/40 h-4 w-4 shrink-0 outline-none"
           />
           <select
-            class="select select-sm w-36"
+            class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
             disabled
           >
-            <option>ipcidr</option>
+            <option>{{ $t('routingPolicyIpCidr') }}</option>
           </select>
-          <input
-            :value="subnet"
-            type="text"
-            class="input input-sm min-w-0 flex-1 font-mono text-xs"
-            disabled
-          />
+          <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
+            <input
+              :value="subnet"
+              type="text"
+              class="input input-sm min-w-0 flex-1 font-mono text-xs"
+              disabled
+            />
+          </div>
           <select
-            class="select select-sm w-32"
+            class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
             disabled
           >
-            <option>{{ $t('clientAppActionProxy') }}</option>
+            <option>{{ $t('clientAppActionProxyShort') }}</option>
           </select>
-          <span class="w-8 shrink-0" />
+          <span class="w-8 shrink-0 max-sm:order-2" />
         </div>
 
-        <div
-          v-for="(r, ri) in form.rules"
-          :key="ri"
-          class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
+        <Draggable
+          v-if="form.rules.length"
+          v-model="form.rules"
+          :animation="150"
+          :force-fallback="true"
+          :fallback-tolerance="5"
+          :fallback-on-body="true"
+          handle=".drag-handle"
+          ghost-class="opacity-40"
+          item-key="key"
+          class="flex flex-col gap-2"
         >
-          <select
-            v-model="r.type"
-            class="select select-sm w-36 shrink-0"
-          >
-            <option
-              v-for="rt in SHARE_REGION_RULE_TYPES"
-              :key="rt"
-              :value="rt"
-            >
-              {{ rt }}
-            </option>
-          </select>
-          <input
-            v-model="r.value"
-            type="text"
-            class="input input-sm min-w-0 flex-1 font-mono text-xs"
-            :placeholder="$t('clientAppRuleValue')"
-          />
-          <select
-            v-model="r.action"
-            class="select select-sm w-32 shrink-0"
-          >
-            <option value="direct">{{ $t('clientAppActionDirect') }}</option>
-            <option value="proxy">{{ $t('clientAppActionProxy') }}</option>
-          </select>
-          <button
-            type="button"
-            class="btn btn-ghost btn-square btn-sm hover:text-error"
-            :aria-label="$t('delete')"
-            @click="form.rules.splice(ri, 1)"
-          >
-            <TrashIcon class="h-4 w-4" />
-          </button>
-        </div>
+          <template #item="{ element, index }">
+            <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+              <Bars3Icon class="drag-handle text-base-content/40 h-4 w-4 shrink-0 cursor-move" />
+              <select
+                v-model="element.type"
+                class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
+              >
+                <option
+                  v-for="rt in RULE_TYPES"
+                  :key="rt.type"
+                  :value="rt.type"
+                >
+                  {{ $t(rt.labelKey) }}
+                </option>
+              </select>
+              <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
+                <GeoRuleValue
+                  v-if="element.type === 'geosite' || element.type === 'geoip'"
+                  v-model="element.value"
+                  :kind="element.type"
+                  :placeholder="$t('routingPolicyRuleGeoPlaceholder')"
+                  :exclude="excludeOf(index)"
+                />
+                <RuleUrlValue
+                  v-else-if="element.type === 'ruleUrl'"
+                  v-model="element.value"
+                  :placeholder="$t('routingPolicyRuleUrlPlaceholder')"
+                />
+                <input
+                  v-else
+                  v-model="element.value"
+                  type="text"
+                  class="input input-sm min-w-0 flex-1 font-mono text-xs"
+                  :placeholder="$t(placeholderOf(element.type))"
+                  @change="splitRuleRow(index)"
+                />
+              </div>
+              <select
+                v-model="element.action"
+                class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
+              >
+                <option
+                  v-for="a in ACTIONS"
+                  :key="a.value"
+                  :value="a.value"
+                >
+                  {{ $t(a.labelKey) }}
+                </option>
+              </select>
+              <button
+                type="button"
+                class="btn btn-ghost btn-square btn-sm hover:text-error max-sm:order-2"
+                :aria-label="$t('delete')"
+                @click="form.rules.splice(index, 1)"
+              >
+                <TrashIcon class="h-4 w-4" />
+              </button>
+            </div>
+          </template>
+        </Draggable>
 
         <div class="flex flex-col gap-1">
           <label class="text-xs font-medium">{{ $t('clientAppCatchAll') }}</label>
@@ -227,10 +272,22 @@
             v-model="form.catchAll"
             class="select select-sm w-full md:w-1/2"
           >
-            <option value="direct">{{ $t('clientAppActionDirect') }}</option>
-            <option value="proxy">{{ $t('clientAppActionProxy') }}</option>
+            <option
+              v-for="a in ACTIONS"
+              :key="a.value"
+              :value="a.value"
+            >
+              {{ $t(a.labelKey) }}
+            </option>
           </select>
         </div>
+
+        <RuleImportDialog
+          v-model="showImport"
+          :max="importMax"
+          hint-key="clientAppRuleImportHint"
+          @import="onImport"
+        />
       </div>
 
       <!-- DNS:直连 / 代理各一条主上游 + 备用 -->
@@ -348,28 +405,35 @@
 <script setup lang="ts">
 import {
   SHARE_REGION_LIMITS,
-  SHARE_REGION_RULE_TYPES,
   type OpenboxShareDnsUpstream,
   type OpenboxShareGroupDns,
   type OpenboxShareRegionGroup,
   type OpenboxShareRule,
+  type OpenboxShareRuleType,
 } from '@/api/clientApp'
+import RuleImportDialog from '@/components/clientapp/RuleImportDialog.vue'
 import CountryFlag from '@/components/common/CountryFlag.vue'
 import CountrySelect from '@/components/common/CountrySelect.vue'
 import DialogWrapper from '@/components/common/DialogWrapper.vue'
+import GeoRuleValue from '@/components/routing/GeoRuleValue.vue'
+import RuleUrlValue from '@/components/routing/RuleUrlValue.vue'
 import { countryName, findCountry } from '@/constant/countries'
 import { showNotification } from '@/helper/notification'
 import {
-  InformationCircleIcon,
+  Bars3Icon,
+  LockClosedIcon,
   PlusIcon,
   TrashIcon,
   XMarkIcon,
 } from '@heroicons/vue/24/outline'
 import { computed, ref, watch } from 'vue'
 import { useI18n } from 'vue-i18n'
+import Draggable from 'vuedraggable'
 
 type Side = 'direct' | 'proxy'
 type Tab = 'name' | 'rules' | 'dns'
+// 规则行要一个稳定的 key 给拖动排序用:类型和值都会被改,不能拿它们当 key
+type RuleRow = OpenboxShareRule & { key: number }
 type Form = {
   id: string
   name: string
@@ -377,10 +441,11 @@ type Form = {
   regions: string[]
   regionMatch: 'inside' | 'outside'
   isDefault: boolean
-  rules: OpenboxShareRule[]
+  rules: RuleRow[]
   catchAll: 'direct' | 'proxy'
   dns: OpenboxShareGroupDns
 }
+let ruleKeySeed = 0
 
 const props = defineProps<{
   modelValue: boolean
@@ -454,7 +519,7 @@ watch(
           regions: [...g.regions],
           regionMatch: g.regionMatch === 'outside' ? 'outside' : 'inside',
           isDefault: g.default === true,
-          rules: clone(g.rules),
+          rules: clone(g.rules).map((r) => ({ ...r, key: ++ruleKeySeed })),
           catchAll: g.catchAll,
           dns: clone(g.dns),
         }
@@ -490,8 +555,125 @@ const removeRegion = (code: string) => {
   if (f) f.regions = f.regions.filter((c) => c !== code)
 }
 
+// ---- 规则 ----
+
+const RULE_TYPES: { type: OpenboxShareRuleType; labelKey: string; placeholderKey: string }[] = [
+  { type: 'domainSuffix', labelKey: 'routingPolicyDomainSuffix', placeholderKey: 'routingPolicyRuleDomainSuffixPlaceholder' },
+  { type: 'domain', labelKey: 'routingPolicyDomain', placeholderKey: 'routingPolicyRuleDomainPlaceholder' },
+  { type: 'domainKeyword', labelKey: 'routingPolicyDomainKeyword', placeholderKey: 'routingPolicyRuleDomainKeywordPlaceholder' },
+  { type: 'ipcidr', labelKey: 'routingPolicyIpCidr', placeholderKey: 'routingPolicyRuleIpCidrPlaceholder' },
+  { type: 'geosite', labelKey: 'routingPolicyGeosite', placeholderKey: 'routingPolicyRuleGeoPlaceholder' },
+  { type: 'geoip', labelKey: 'routingPolicyGeoip', placeholderKey: 'routingPolicyRuleGeoPlaceholder' },
+  { type: 'ruleUrl', labelKey: 'routingPolicyRuleUrl', placeholderKey: 'routingPolicyRuleUrlPlaceholder' },
+]
+const ACTIONS: { value: 'direct' | 'proxy'; labelKey: string }[] = [
+  { value: 'direct', labelKey: 'clientAppActionDirect' },
+  { value: 'proxy', labelKey: 'clientAppActionProxyShort' },
+]
+
+const placeholderOf = (type: string) =>
+  RULE_TYPES.find((r) => r.type === type)?.placeholderKey || 'routingPolicyRuleDomainPlaceholder'
+
+// 新行沿用上一行的走向
 const addRule = () => {
-  form.value?.rules.push({ type: 'domainSuffix', value: '', action: 'proxy' })
+  const f = form.value
+  if (!f) return
+  const last = f.rules[f.rules.length - 1]
+  f.rules.push({ key: ++ruleKeySeed, type: 'domainSuffix', value: '', action: last?.action || 'direct' })
+}
+
+// 同一类型里别的行已经选过的值,选择器里不再给
+const excludeOf = (index: number) => {
+  const rules = form.value?.rules || []
+  return rules
+    .filter((r, i) => i !== index && r.type === rules[index]?.type)
+    .map((r) => r.value)
+}
+
+// 在域名 / IP 这几类的值框里粘贴了一串(空格、逗号、顿号隔开),自动拆成一行一个;新行沿用这一行的类型和走向
+const SPLIT_PATTERN = /[\s,，;；、]+/
+const splitRuleRow = (index: number) => {
+  const rules = form.value?.rules
+  const row = rules?.[index]
+  if (!rules || !row || row.type === 'geosite' || row.type === 'geoip' || row.type === 'ruleUrl') return
+  const parts = row.value.split(SPLIT_PATTERN).map((s) => s.trim()).filter(Boolean)
+  if (parts.length <= 1) {
+    row.value = parts[0] ?? ''
+    return
+  }
+  row.value = parts[0]
+  rules.splice(
+    index + 1,
+    0,
+    ...parts.slice(1).map((value) => ({ key: ++ruleKeySeed, type: row.type, value, action: row.action })),
+  )
+}
+
+// 家里局域网网段:路由器自动加,只读。规则里已经写了同一网段就不重复显示
+const normCidr = (raw: string) => {
+  const v = raw.trim()
+  const m = /^(\d+)\.(\d+)\.(\d+)\.(\d+)\/(\d+)$/.exec(v)
+  if (!m) return v
+  const bits = Number(m[5])
+  if (bits > 32) return v
+  const ip = (((+m[1] << 24) | (+m[2] << 16) | (+m[3] << 8) | +m[4]) >>> 0)
+  const mask = bits === 0 ? 0 : (0xffffffff << (32 - bits)) >>> 0
+  const n = (ip & mask) >>> 0
+  return `${n >>> 24}.${(n >>> 16) & 255}.${(n >>> 8) & 255}.${n & 255}/${bits}`
+}
+const lanRows = computed(() => {
+  const have = new Set(
+    (form.value?.rules || []).filter((r) => r.type === 'ipcidr').map((r) => normCidr(r.value)),
+  )
+  return (props.lanSubnets || []).filter((s) => !have.has(normCidr(s)))
+})
+
+// 规则值校验(和后端 engine/share-regions.mjs 同一套,后端才是权威)
+const GEO_RE = /^[a-z0-9!@._-]{1,80}$/
+const DOMAIN_RE = /^[A-Za-z0-9*_.-]{1,253}$/
+const URL_RE = /^https?:\/\/\S+$/i
+const IPV4_RE = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/
+const isIpOrCidr = (raw: string) => {
+  const [addr, prefix, ...rest] = raw.split('/')
+  if (rest.length) return false
+  const v4 = IPV4_RE.test(addr)
+  const v6 = !v4 && /^[0-9a-f:]+$/i.test(addr) && addr.includes(':') && addr.split('::').length <= 2
+  if (!v4 && !v6) return false
+  if (prefix === undefined) return true
+  if (!/^\d+$/.test(prefix)) return false
+  return Number(prefix) <= (v4 ? 32 : 128)
+}
+const ruleValueOk = (type: string, value: string) => {
+  if (type === 'geosite' || type === 'geoip') return GEO_RE.test(value)
+  if (type === 'ipcidr') return isIpOrCidr(value)
+  if (type === 'ruleUrl') return URL_RE.test(value) && value.length <= SHARE_REGION_LIMITS.ruleUrlMax
+  return DOMAIN_RE.test(value)
+}
+
+// ---- 导入规则(从规则集网址预览后追加明细)----
+
+const showImport = ref(false)
+const filledRules = () => (form.value?.rules || []).filter((r) => r.value.trim())
+const importMax = computed(() => Math.max(0, SHARE_REGION_LIMITS.rulesPerGroup - filledRules().length))
+const IMPORT_TYPES: Record<string, OpenboxShareRuleType | undefined> = {
+  domain: 'domain',
+  domain_suffix: 'domainSuffix',
+  domain_keyword: 'domainKeyword',
+  ip_cidr: 'ipcidr',
+}
+const onImport = (entries: { type: string; value: string }[]) => {
+  const f = form.value
+  if (!f) return
+  const kept = filledRules()
+  // 走向沿用最后一行;一行都没有时,和「其余流量」相反(其余走哪边,导入的就走另一边)
+  const action = kept[kept.length - 1]?.action || (f.catchAll === 'proxy' ? 'direct' : 'proxy')
+  f.rules = [
+    ...kept,
+    ...entries.flatMap((e) => {
+      const type = IMPORT_TYPES[e.type]
+      return type ? [{ key: ++ruleKeySeed, type, value: e.value, action }] : []
+    }),
+  ]
 }
 
 // ---- DNS ----
@@ -544,6 +726,20 @@ const submit = () => {
     showNotification({ content: 'clientAppErrOutside', params: { id: f.id }, type: 'alert-error' })
     return
   }
+  for (let i = 0; i < f.rules.length; i++) splitRuleRow(i)
+  const rules = f.rules
+    .map((r) => ({ type: r.type, value: r.value.trim(), action: r.action }))
+    .filter((r) => r.value)
+  const bad = rules.findIndex((r) => !ruleValueOk(r.type, r.value))
+  if (bad >= 0) {
+    tab.value = 'rules'
+    showNotification({
+      content: 'clientAppErrRule',
+      params: { index: String(bad + 1), value: rules[bad].value },
+      type: 'alert-error',
+    })
+    return
+  }
   const group: OpenboxShareRegionGroup = {
     id: f.id,
     name,
@@ -551,9 +747,7 @@ const submit = () => {
     regions: [...f.regions],
     ...(f.regionMatch === 'outside' ? { regionMatch: 'outside' as const } : {}),
     ...(f.isDefault ? { default: true } : {}),
-    rules: f.rules
-      .map((r) => ({ type: r.type, value: r.value.trim(), action: r.action }))
-      .filter((r) => r.value),
+    rules,
     catchAll: f.catchAll,
     dns: {
       ...f.dns,

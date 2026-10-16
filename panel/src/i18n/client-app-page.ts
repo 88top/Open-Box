@@ -53,4 +53,10 @@ export const clientAppPageZh = {
   clientAppLastSync: '最后同步 {time}',
   clientAppNeverSynced: '还没同步过',
   clientAppShowQr: '二维码',
+
+  // 地区组规则页签(对照上游 v0.1.331)
+  clientAppErrRule: '第 {index} 条规则的值不对:{value}',
+  clientAppRuleImportHint:
+    '输入规则集网址（支持 .list / .mrs / .srs），预览确认后会把域名和 IP 明细追加到这一组，走哪边沿用最后一行（导入后可以逐行改）。这一组最多还能导入 {max} 条；更多的请直接用「规则集链接」引用这个网址。',
+  clientAppImportTooMany: '共 {count} 条,超过这一组还能导入的 {max} 条;请改用「规则集链接」引用这个网址。',
 }
