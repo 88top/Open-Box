@@ -133,138 +133,140 @@
       <!-- 规则 -->
       <div
         v-show="tab === 'rules'"
-        class="flex flex-col gap-3"
+        class="flex flex-col gap-4"
       >
-        <div class="flex items-center justify-between gap-2">
-          <p class="text-base-content/60 text-xs">
-            {{ $t(form.rules.length || lanSubnets.length ? 'clientAppRulesHint' : 'clientAppNoRules') }}
-          </p>
-          <div class="flex shrink-0 items-center gap-1">
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs"
-              :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
-              @click="showImport = true"
-            >
-              {{ $t('routingPolicyRuleImport') }}
-            </button>
-            <button
-              type="button"
-              class="btn btn-ghost btn-xs"
-              :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
-              @click="addRule"
-            >
-              <PlusIcon class="h-3.5 w-3.5" />
-              {{ $t('clientAppAddRule') }}
-            </button>
-          </div>
-        </div>
-
-        <!-- 路由器自动加的「家里局域网 → 经路由器」,只读(规则里已经有同一网段就不重复显示) -->
-        <div
-          v-for="subnet in lanRows"
-          :key="subnet"
-          class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
-        >
-          <LockClosedIcon
-            v-tip="$t('clientAppLanRuleTip')"
-            class="text-base-content/40 h-4 w-4 shrink-0 outline-none"
-          />
-          <select
-            class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
-            disabled
-          >
-            <option>{{ $t('routingPolicyIpCidr') }}</option>
-          </select>
-          <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
-            <input
-              :value="subnet"
-              type="text"
-              class="input input-sm min-w-0 flex-1 font-mono text-xs"
-              disabled
-            />
-          </div>
-          <select
-            class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
-            disabled
-          >
-            <option>{{ $t('clientAppActionProxyShort') }}</option>
-          </select>
-          <span class="w-8 shrink-0 max-sm:order-2" />
-        </div>
-
-        <Draggable
-          v-if="form.rules.length"
-          v-model="form.rules"
-          :animation="150"
-          :force-fallback="true"
-          :fallback-tolerance="5"
-          :fallback-on-body="true"
-          handle=".drag-handle"
-          ghost-class="opacity-40"
-          item-key="key"
-          class="flex flex-col gap-2"
-        >
-          <template #item="{ element, index }">
-            <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
-              <Bars3Icon class="drag-handle text-base-content/40 h-4 w-4 shrink-0 cursor-move" />
-              <select
-                v-model="element.type"
-                class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
-              >
-                <option
-                  v-for="rt in RULE_TYPES"
-                  :key="rt.type"
-                  :value="rt.type"
-                >
-                  {{ $t(rt.labelKey) }}
-                </option>
-              </select>
-              <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
-                <GeoRuleValue
-                  v-if="element.type === 'geosite' || element.type === 'geoip'"
-                  v-model="element.value"
-                  :kind="element.type"
-                  :placeholder="$t('routingPolicyRuleGeoPlaceholder')"
-                  :exclude="excludeOf(index)"
-                />
-                <RuleUrlValue
-                  v-else-if="element.type === 'ruleUrl'"
-                  v-model="element.value"
-                  :placeholder="$t('routingPolicyRuleUrlPlaceholder')"
-                />
-                <input
-                  v-else
-                  v-model="element.value"
-                  type="text"
-                  class="input input-sm min-w-0 flex-1 font-mono text-xs"
-                  :placeholder="$t(placeholderOf(element.type))"
-                  @change="splitRuleRow(index)"
-                />
-              </div>
-              <select
-                v-model="element.action"
-                class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
-              >
-                <option
-                  v-for="a in ACTIONS"
-                  :key="a.value"
-                  :value="a.value"
-                >
-                  {{ $t(a.labelKey) }}
-                </option>
-              </select>
+        <div class="flex flex-col gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <p class="text-base-content/60 text-xs">
+              {{ $t(form.rules.length || lanSubnets.length ? 'clientAppRulesHint' : 'clientAppNoRules') }}
+            </p>
+            <div class="flex shrink-0 items-center gap-1">
               <button
                 type="button"
-                class="btn btn-ghost btn-square btn-sm hover:text-error max-sm:order-2"
-                :aria-label="$t('delete')"
-                @click="form.rules.splice(index, 1)"
+                class="btn btn-ghost btn-xs"
+                :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
+                @click="showImport = true"
               >
-                <TrashIcon class="h-4 w-4" />
+                {{ $t('routingPolicyRuleImport') }}
+              </button>
+              <button
+                type="button"
+                class="btn btn-ghost btn-xs"
+                :disabled="form.rules.length >= SHARE_REGION_LIMITS.rulesPerGroup"
+                @click="addRule"
+              >
+                <PlusIcon class="h-3.5 w-3.5" />
+                {{ $t('clientAppAddRule') }}
               </button>
             </div>
-          </template>
-        </Draggable>
+          </div>
+
+          <!-- 路由器自动加的「家里局域网 → 经路由器」,只读(规则里已经有同一网段就不重复显示) -->
+          <div
+            v-for="subnet in lanRows"
+            :key="subnet"
+            class="flex flex-wrap items-center gap-2 sm:flex-nowrap"
+          >
+            <LockClosedIcon
+              v-tip="$t('clientAppLanRuleTip')"
+              class="text-base-content/40 h-4 w-4 shrink-0 outline-none"
+            />
+            <select
+              class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
+              disabled
+            >
+              <option>{{ $t('routingPolicyIpCidr') }}</option>
+            </select>
+            <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
+              <input
+                :value="subnet"
+                type="text"
+                class="input input-sm min-w-0 flex-1 font-mono text-xs"
+                disabled
+              />
+            </div>
+            <select
+              class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
+              disabled
+            >
+              <option>{{ $t('clientAppActionProxyShort') }}</option>
+            </select>
+            <span class="w-8 shrink-0 max-sm:order-2" />
+          </div>
+
+          <Draggable
+            v-if="form.rules.length"
+            v-model="form.rules"
+            :animation="150"
+            :force-fallback="true"
+            :fallback-tolerance="5"
+            :fallback-on-body="true"
+            handle=".drag-handle"
+            ghost-class="opacity-40"
+            item-key="key"
+            class="flex flex-col gap-2"
+          >
+            <template #item="{ element, index }">
+              <div class="flex flex-wrap items-center gap-2 sm:flex-nowrap">
+                <Bars3Icon class="drag-handle text-base-content/40 h-4 w-4 shrink-0 cursor-move" />
+                <select
+                  v-model="element.type"
+                  class="select select-sm w-36 shrink-0 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[35%]"
+                >
+                  <option
+                    v-for="rt in RULE_TYPES"
+                    :key="rt.type"
+                    :value="rt.type"
+                  >
+                    {{ $t(rt.labelKey) }}
+                  </option>
+                </select>
+                <div class="flex min-w-0 flex-1 items-center gap-2 max-sm:order-3 max-sm:grow max-sm:basis-[60%]">
+                  <GeoRuleValue
+                    v-if="element.type === 'geosite' || element.type === 'geoip'"
+                    v-model="element.value"
+                    :kind="element.type"
+                    :placeholder="$t('routingPolicyRuleGeoPlaceholder')"
+                    :exclude="excludeOf(index)"
+                  />
+                  <RuleUrlValue
+                    v-else-if="element.type === 'ruleUrl'"
+                    v-model="element.value"
+                    :placeholder="$t('routingPolicyRuleUrlPlaceholder')"
+                  />
+                  <input
+                    v-else
+                    v-model="element.value"
+                    type="text"
+                    class="input input-sm min-w-0 flex-1 font-mono text-xs"
+                    :placeholder="$t(placeholderOf(element.type))"
+                    @change="splitRuleRow(index)"
+                  />
+                </div>
+                <select
+                  v-model="element.action"
+                  class="select select-sm w-32 shrink-0 max-sm:order-1 max-sm:w-auto max-sm:min-w-0 max-sm:grow max-sm:basis-[40%]"
+                >
+                  <option
+                    v-for="a in ACTIONS"
+                    :key="a.value"
+                    :value="a.value"
+                  >
+                    {{ $t(a.labelKey) }}
+                  </option>
+                </select>
+                <button
+                  type="button"
+                  class="btn btn-ghost btn-square btn-sm hover:text-error max-sm:order-2"
+                  :aria-label="$t('delete')"
+                  @click="form.rules.splice(index, 1)"
+                >
+                  <TrashIcon class="h-4 w-4" />
+                </button>
+              </div>
+            </template>
+          </Draggable>
+        </div>
 
         <div class="flex flex-col gap-1">
           <label class="text-xs font-medium">{{ $t('clientAppCatchAll') }}</label>
