@@ -21,6 +21,7 @@
             <ShareNodeCodesCard :info="info" />
           </div>
           <LocalRoutingCard :info="info" />
+          <ContentFilterCard />
         </template>
       </div>
     </div>
@@ -30,6 +31,7 @@
 <script setup lang="ts">
 import { fetchClientAppInfo, type OpenboxClientAppInfo } from '@/api/clientApp'
 import ClientDownloadsCard from '@/components/clientapp/ClientDownloadsCard.vue'
+import ContentFilterCard from '@/components/clientapp/ContentFilterCard.vue'
 import LocalRoutingCard from '@/components/clientapp/LocalRoutingCard.vue'
 import RouterIdentityCard from '@/components/clientapp/RouterIdentityCard.vue'
 import ShareNodeCodesCard from '@/components/clientapp/ShareNodeCodesCard.vue'
