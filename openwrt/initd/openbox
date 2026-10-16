@@ -49,6 +49,21 @@ OPENBOX_TERM_TIMEOUT=15
 # 内核的 tun 网卡名(和 panel/server/engine/tun-options.mjs 的 TUN_INTERFACE_NAME 一致)
 OPENBOX_TUN=openbox-tun
 
+# 部署时保存的三条受管规则;关机/stop 清理后,直接 start 也必须恢复(#636)。
+# -m 只合并这些具名段,不替换整个 firewall。没有变化时不重载 fw4。
+openbox_restore_firewall() {
+	[ -s "$DATA/firewall-startup.conf" ] || return 0
+	if ! uci -q -m import firewall < "$DATA/firewall-startup.conf"; then
+		logger -t openbox '恢复 TUN 防火墙规则失败,请检查配置和存储空间' 2>/dev/null
+		return 1
+	fi
+	if [ -n "$(uci -q changes firewall)" ]; then
+		uci -q commit firewall || return 1
+		/etc/init.d/firewall reload >/dev/null 2>&1
+	fi
+	return 0
+}
+
 openbox_dnsmasq_mode() {
 	if [ -f "$CONF_META" ]; then
 		grep -qE "\"dnsMode\": *\"dnsmasq\"" "$CONF_META" 2>/dev/null
@@ -422,6 +437,7 @@ start_service() {
 
 	openbox_clean_stale_nft
 	openbox_apply_takeover
+	openbox_restore_firewall || { openbox_cleanup; return 1; }
 	openbox_load_modules
 	openbox_apply_nft
 	openbox_apply_mark_rule
