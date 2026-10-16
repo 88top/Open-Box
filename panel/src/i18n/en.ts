@@ -1399,7 +1399,7 @@ const en = {
   clientAppLoadFailed: 'Failed to load: {message}',
   clientAppSaved: 'Saved; the app picks it up on its next sync.',
   clientSystemDns: 'Client direct DNS uses the current network',
-  clientSystemDnsHint: 'By default the phone or computer uses the DNS of its current network. When off, the router's direct DNS upstreams are synced instead; make sure they stay reachable outside your LAN.',
+  clientSystemDnsHint: 'By default the phone or computer uses the DNS of its current network. When off, the direct DNS upstreams configured on the router are synced instead; make sure they stay reachable outside your LAN.',
   clientSystemDnsSaveFailed: 'Save failed: {message}',
   clientAppLocalTitle: 'Local routing (app)',
   clientAppLocalHint: 'The Open-Box app uses this router\'s nodes and routing rules to go online by itself, not through the router. Codes and files carry every node\'s credentials: only give them to your own devices.',
