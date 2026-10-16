@@ -261,6 +261,12 @@ export const setContentFilterEnabled = (id: string, enabled: boolean) =>
 export const deleteContentFilter = (id: string) =>
   requestJson<OpenboxContentFilterList>(`/api/openbox/content-filter/${id}`, { method: 'DELETE' })
 
+// 恢复默认:三份默认规则回到随包内容和启用状态,补回被删的默认规则,保留自己加的;返回整份最新列表
+export const restoreContentFilterDefaults = () =>
+  requestJson<OpenboxContentFilterList>('/api/openbox/content-filter/restore-defaults', {
+    method: 'POST',
+  })
+
 // ---- 激活(server/api/activation.mjs)----
 // 概览页顶栏默认放站点推广;输入内置激活码后顶栏左右两边换成自己填的文字(留空 = 默认的版本号)。
 // 状态存在路由器上。后端用 400 回「激活码不对」{ error: 'invalid activation code' } 和「还没激活」{ error: 'not activated' }。

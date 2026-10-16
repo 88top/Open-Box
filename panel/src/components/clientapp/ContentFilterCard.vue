@@ -7,16 +7,28 @@
     <div class="card-body gap-3 p-4 text-sm">
       <div class="flex items-center justify-between gap-2">
         <h2 class="text-base font-semibold">{{ $t('cfTitle') }}</h2>
-        <button
-          type="button"
-          class="btn btn-primary btn-sm btn-square"
-          :disabled="busy || loading"
-          :aria-label="$t('cfAdd')"
-          v-tip="$t('cfAdd')"
-          @click="openEditor()"
-        >
-          <PlusIcon class="h-4 w-4" />
-        </button>
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            class="btn btn-ghost btn-square btn-sm"
+            :disabled="busy || loading"
+            :aria-label="$t('cfRestore')"
+            v-tip="$t('cfRestore')"
+            @click="restoreOpen = true"
+          >
+            <ArrowUturnLeftIcon class="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary btn-sm btn-square"
+            :disabled="busy || loading"
+            :aria-label="$t('cfAdd')"
+            v-tip="$t('cfAdd')"
+            @click="openEditor()"
+          >
+            <PlusIcon class="h-4 w-4" />
+          </button>
+        </div>
       </div>
       <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('cfDescription') }}</p>
 
@@ -117,6 +129,36 @@
         {{ $t('cfSyncHint') }}
       </p>
     </div>
+
+    <DialogWrapper
+      v-model="restoreOpen"
+      :title="$t('cfRestore')"
+      box-class="content-filter-dialog"
+    >
+      <p class="text-sm">{{ $t('cfRestoreConfirm') }}</p>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-ghost"
+          :disabled="busy"
+          @click="restoreOpen = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary"
+          :disabled="busy || loading"
+          @click="confirmRestore"
+        >
+          <span
+            v-if="busy"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('confirm') }}
+        </button>
+      </template>
+    </DialogWrapper>
 
     <DialogWrapper
       v-model="editorOpen"
@@ -242,6 +284,7 @@ import {
   deleteContentFilter,
   fetchContentFilter,
   fetchContentFilterSource,
+  restoreContentFilterDefaults,
   saveContentFilter,
   setContentFilterEnabled,
   type OpenboxContentFilterDialect,
@@ -252,6 +295,7 @@ import DialogWrapper from '@/components/common/DialogWrapper.vue'
 import { showNotification } from '@/helper/notification'
 import {
   ArrowPathIcon,
+  ArrowUturnLeftIcon,
   PencilSquareIcon,
   PlusIcon,
   PowerIcon,
@@ -274,6 +318,7 @@ const list = ref<OpenboxContentFilterList>({ sets: [], sha256: '', size: 0 })
 const loading = ref(true)
 const busy = ref(false)
 const editorOpen = ref(false)
+const restoreOpen = ref(false)
 const pendingDelete = ref<OpenboxContentFilterSet | null>(null)
 
 const form = reactive({
@@ -300,12 +345,12 @@ const notifyFailed = (error: unknown) =>
   })
 
 // 新增 / 启停 / 更新 / 删除都返回整份最新列表,统一在这里处理
-const run = async (action: () => Promise<OpenboxContentFilterList>) => {
+const run = async (action: () => Promise<OpenboxContentFilterList>, doneKey = 'cfSaved') => {
   if (busy.value) return false
   busy.value = true
   try {
     list.value = await action()
-    showNotification({ content: 'cfSaved', type: 'alert-success' })
+    showNotification({ content: doneKey, type: 'alert-success' })
     return true
   } catch (error) {
     notifyFailed(error)
@@ -373,6 +418,10 @@ const confirmDelete = async () => {
   if (await run(() => deleteContentFilter(target.id))) pendingDelete.value = null
 }
 
+const confirmRestore = async () => {
+  if (await run(restoreContentFilterDefaults, 'cfRestored')) restoreOpen.value = false
+}
+
 onMounted(async () => {
   try {
     list.value = await fetchContentFilter()
@@ -389,10 +438,13 @@ onMounted(async () => {
   outline: 2px solid currentColor;
   outline-offset: 3px;
 }
-.content-filter :deep(.btn-square) {
-  width: 44px;
-  min-width: 44px;
-  height: 44px;
-  min-height: 44px;
+/* 44px 触控尺寸只给手机 / 触屏;桌面保持 daisyUI 默认的 btn-xs / btn-sm 尺寸,卡片才不会被撑高 */
+@media (max-width: 639px), (pointer: coarse) {
+  .content-filter :deep(.btn-square) {
+    width: 44px;
+    min-width: 44px;
+    height: 44px;
+    min-height: 44px;
+  }
 }
 </style>
