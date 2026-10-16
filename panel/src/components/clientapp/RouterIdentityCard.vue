@@ -31,7 +31,7 @@
             />
           </div>
         </div>
-        <div class="flex w-full flex-col gap-1 md:w-52">
+        <div class="flex w-full flex-col gap-1 md:w-44">
           <label class="text-xs font-medium">{{ $t('clientAppServerRegion') }}</label>
           <CountrySelect
             :model-value="form.region"
