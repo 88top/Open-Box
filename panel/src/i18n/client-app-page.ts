@@ -45,6 +45,9 @@ export const clientAppPageZh = {
   clientAppShareQrTitle: '扫码连接「{name}」',
   clientAppShareQrHint: '用 Open-Box App 扫:按本页「地区分流」分流。',
 
+  clientSystemDns: '客户端直连 DNS 使用当前网络',
+  clientSystemDnsHint: '默认使用手机或电脑当前网络的 DNS；关闭后同步路由器配置的直连 DNS 上游，请确保离开局域网后仍可访问。',
+  clientSystemDnsSaveFailed: '保存失败:{message}',
   clientAppLocalTitle: '本地分流（客户端）',
   clientAppLocalHint: 'Open-Box App 用这台路由器的节点和分流规则自己上网,不经过路由器。码和文件里有全部节点的账号密码,只给自己的设备。',
   clientAppLocalScanHint: '用 Open-Box App 扫码导入,或把链接复制到手机上导入。所有手机用同一个码,码固定不变。',

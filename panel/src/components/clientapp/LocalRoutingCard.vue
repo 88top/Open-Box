@@ -73,6 +73,19 @@
           />
         </button>
       </div>
+      <div class="border-base-content/10 flex items-center justify-between gap-3 border-t pt-3">
+        <div class="flex min-w-0 flex-col">
+          <span class="text-sm">{{ $t('clientSystemDns') }}</span>
+          <span class="text-base-content/60 text-xs">{{ $t('clientSystemDnsHint') }}</span>
+        </div>
+        <input
+          type="checkbox"
+          class="toggle toggle-success shrink-0"
+          :checked="systemDns"
+          :disabled="systemDnsBusy"
+          @change="setSystemDns"
+        />
+      </div>
     </div>
 
     <DialogWrapper
@@ -131,6 +144,7 @@
 </template>
 
 <script setup lang="ts">
+import { getConfigsAPI, patchConfigsAPI } from '@/api'
 import {
   fetchClientConfig,
   fetchClientConfigFile,
@@ -158,6 +172,38 @@ import QRCode from 'qrcode'
 import { computed, onMounted, ref, watch } from 'vue'
 
 const props = defineProps<{ info: OpenboxClientAppInfo }>()
+
+const systemDns = ref(true)
+const systemDnsBusy = ref(true)
+
+onMounted(async () => {
+  try {
+    const { data } = await getConfigsAPI()
+    systemDns.value = (data as unknown as Record<string, unknown>).clientSystemDns !== false
+  } catch (error) {
+    showNotification({ content: 'clientAppLoadFailed', params: { message: errorMessage(error) } })
+  } finally {
+    systemDnsBusy.value = false
+  }
+})
+
+const setSystemDns = async (event: Event) => {
+  const input = event.target as HTMLInputElement
+  const next = input.checked
+  systemDnsBusy.value = true
+  try {
+    await patchConfigsAPI({ clientSystemDns: next })
+    systemDns.value = next
+  } catch (error) {
+    input.checked = systemDns.value
+    showNotification({
+      content: 'clientSystemDnsSaveFailed',
+      params: { message: errorMessage(error) },
+    })
+  } finally {
+    systemDnsBusy.value = false
+  }
+}
 
 const issue = ref<OpenboxClientConfigIssue | null>(null)
 const loading = ref(true)
