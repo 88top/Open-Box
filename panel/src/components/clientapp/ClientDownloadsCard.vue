@@ -144,25 +144,37 @@ const parseReleases = (data: unknown): Record<string, Release> => {
   return out
 }
 
-const loadReleases = async (): Promise<Record<string, Release>> => {
+const readCache = (): { at: number; downloads: Record<string, Release> } | null => {
   try {
     const cached = JSON.parse(localStorage.getItem(CACHE_KEY) || 'null')
-    if (cached?.downloads && Date.now() - Number(cached.at) < CACHE_TTL) return cached.downloads
+    if (cached?.downloads) return { at: Number(cached.at) || 0, downloads: cached.downloads }
   } catch {
-    // 缓存坏了就重新取
+    // 缓存坏了就当没有
   }
+  return null
+}
+
+const loadReleases = async (): Promise<Record<string, Release>> => {
+  const cached = readCache()
+  if (cached && Date.now() - cached.at < CACHE_TTL) return cached.downloads
   const controller = new AbortController()
   const timer = setTimeout(() => controller.abort(), FETCH_TIMEOUT)
   try {
     const res = await fetch(RELEASES_API, { signal: controller.signal })
     if (!res.ok) throw new Error(`HTTP ${res.status}`)
     const downloads = parseReleases(await res.json())
+    // 没解析出任何安装包就不覆盖缓存,继续用上次成功的版本号
+    if (cached && Object.keys(downloads).length === 0) return cached.downloads
     try {
       localStorage.setItem(CACHE_KEY, JSON.stringify({ at: Date.now(), downloads }))
     } catch {
       // 存不了就算了
     }
     return downloads
+  } catch (e) {
+    // 限流或网络不通时沿用上次成功的版本号,不让它变回「最新版」
+    if (cached) return cached.downloads
+    throw e
   } finally {
     clearTimeout(timer)
   }
