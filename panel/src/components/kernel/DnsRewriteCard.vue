@@ -2,47 +2,48 @@
   <!-- DNS 重写:布局和域名过滤卡统一;规则存在档案 dns.rewrite 里 -->
   <div class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-base font-semibold">{{ $t('dnsRewriteTitle') }}</h2>
-          <input
-            type="checkbox"
-            class="toggle toggle-sm shrink-0"
-            :aria-label="$t('dnsRewriteTitle')"
-            :checked="rewriteEnabled"
-            :disabled="saving || busy"
-            @change="toggleMaster"
-          />
-          <span
-            class="badge badge-sm"
-            :class="rewriteEnabled ? 'badge-success' : ''"
-          >{{ $t(rewriteEnabled ? 'dfEnabled' : 'dfDisabled') }}</span>
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-base font-semibold">{{ $t('dnsRewriteTitle') }}</h2>
+            <input
+              type="checkbox"
+              class="toggle toggle-sm shrink-0"
+              :aria-label="$t('dnsRewriteTitle')"
+              :checked="rewriteEnabled"
+              :disabled="saving || busy"
+              @change="toggleMaster"
+            />
+            <span
+              class="badge badge-sm"
+              :class="rewriteEnabled ? 'badge-success' : ''"
+            >{{ $t(rewriteEnabled ? 'dfEnabled' : 'dfDisabled') }}</span>
+          </div>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              v-tip="$t('dnsRewriteRestore')"
+              type="button"
+              class="btn btn-ghost btn-square btn-sm"
+              :disabled="saving"
+              :aria-label="$t('dnsRewriteRestore')"
+              @click="showRestore = true"
+            >
+              <ArrowUturnLeftIcon class="h-4 w-4" />
+            </button>
+            <button
+              v-tip="$t('dnsRewriteAdd')"
+              type="button"
+              class="btn btn-primary btn-sm btn-square"
+              :disabled="saving"
+              :aria-label="$t('dnsRewriteAdd')"
+              @click="openEditor(null)"
+            >
+              <PlusIcon class="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
-          <button
-            v-tip="$t('dnsRewriteRestore')"
-            type="button"
-            class="btn btn-ghost btn-square btn-sm"
-            :disabled="saving"
-            :aria-label="$t('dnsRewriteRestore')"
-            @click="showRestore = true"
-          >
-            <ArrowUturnLeftIcon class="h-4 w-4" />
-          </button>
-          <button
-            v-tip="$t('dnsRewriteAdd')"
-            type="button"
-            class="btn btn-primary btn-sm btn-square"
-            :disabled="saving"
-            :aria-label="$t('dnsRewriteAdd')"
-            @click="openEditor(null)"
-          >
-            <PlusIcon class="h-4 w-4" />
-          </button>
-        </div>
+        <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dnsRewriteDescription') }}</p>
       </div>
-
-      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dnsRewriteDescription') }}</p>
 
       <p
         v-if="!rules.length"
