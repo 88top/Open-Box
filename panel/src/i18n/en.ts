@@ -947,6 +947,8 @@ const en = {
   kernelConflictTitle: 'Another proxy service is running',
   kernelConflictItem: "Stop {name} first — Open-Box refuses to start while it's running.",
   kernelVersionLabel: 'Kernel version',
+  dockerAccessHint:
+    'For one device, set its IPv4 gateway and DNS to {ip}. To connect the entire LAN, configure the main router DHCP gateway and DNS to this address.',
   kernelVersionUnknown: 'Unknown',
   kernelCoreLabel: 'Core',
   kernelPanelLabel: 'Panel',

@@ -187,4 +187,12 @@ onMounted(async () => {
 .kernel-group .tabs-box .tab {
   border-radius: 9999px !important;
 }
+/* 平台卡片:本机所在的那张白底、深一点的边框;其余几张浅灰底(与 v0.1.337 一致) */
+#app-content .router-platform-tiles > :not(.platform-tile-current) {
+  background-color: color-mix(in oklab, var(--color-base-content) 7%, var(--color-base-100)) !important;
+}
+#app-content .platform-tile-current {
+  border-color: color-mix(in oklab, var(--color-base-content) 35%, transparent);
+  background-color: var(--color-base-100) !important;
+}
 </style>

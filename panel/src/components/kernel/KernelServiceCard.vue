@@ -25,32 +25,39 @@
         </div>
       </div>
 
-      <!-- 平台:本机跑在哪种系统上高亮,另一种只列支持的系统 -->
+      <!-- 平台:OpenWrt / Linux / Docker 三张卡,本机所在的那张高亮,其余灰底灰图标(与 v0.1.337 一致) -->
       <div
         v-if="serviceStatus"
-        class="flex flex-wrap gap-3"
+        class="router-platform-tiles grid grid-cols-[repeat(auto-fill,minmax(min(19rem,100%),1fr))] gap-2"
       >
         <div
           v-for="p in platformCards"
           :key="p.id"
-          class="flex w-96 max-w-full flex-none items-center gap-3 rounded-full border py-2 pr-6 pl-4"
-          :class="p.current ? 'border-base-300 bg-base-200/70' : 'border-base-300/60'"
-          v-tip="p.hint"
+          class="@container/tile bg-base-100 border-base-300/60 rounded-lg border px-3 py-2.5"
+          :class="p.current && 'platform-tile-current'"
+          :title="p.hint"
         >
-          <PlatformIcon
-            :name="p.id"
-            class="h-9 w-9 shrink-0"
-          />
-          <div class="min-w-0">
-            <div class="flex flex-wrap items-baseline gap-x-2">
-              <span class="font-medium">{{ p.title }}</span>
-              <span
-                v-if="p.current && thisDevice"
-                class="text-base-content/70 text-xs"
-              >{{ thisDevice }}</span>
-            </div>
-            <p class="text-base-content/50 text-xs">{{ p.req }}</p>
-          </div>
+          <span class="flex flex-col items-start gap-1.5 @min-[14rem]/tile:flex-row @min-[14rem]/tile:gap-2">
+            <CountryFlag
+              :code="p.icon"
+              :size="32"
+              :title="p.hint"
+              class="shrink-0 @min-[14rem]/tile:mt-0.5"
+              :class="!p.current && 'grayscale'"
+            />
+            <span class="flex max-w-full min-w-0 flex-col">
+              <span class="flex max-w-full flex-wrap items-baseline gap-x-1.5">
+                <span class="max-w-full truncate leading-5 font-medium">{{ p.title }}</span>
+                <span
+                  v-if="p.current && thisDevice"
+                  class="text-base-content/60 max-w-full truncate text-xs leading-4 tabular-nums"
+                >
+                  {{ thisDevice }}
+                </span>
+              </span>
+              <span class="platform-tile-req text-base-content/50 text-xs leading-4 break-keep">{{ nbsp(p.req) }}</span>
+            </span>
+          </span>
         </div>
       </div>
 
@@ -242,11 +249,11 @@
 
 <script setup lang="ts">
 import type { OpenboxKernelVersion, OpenboxProfile, OpenboxServiceStatus } from '@/api/openbox'
+import CountryFlag from '@/components/common/CountryFlag.vue'
 import GithubIcon from '@/components/common/GithubIcon.vue'
 import StatusBadge from '@/components/common/StatusBadge.vue'
 import FactoryResetButton from '@/components/kernel/FactoryResetButton.vue'
 import OpenboxUpdateCard from '@/components/kernel/OpenboxUpdateCard.vue'
-import PlatformIcon from '@/components/kernel/PlatformIcon.vue'
 import {
   isRestartDisabled,
   isStartDisabled,
@@ -256,6 +263,7 @@ import {
   useKernelActions,
 } from '@/composables/kernelService'
 import { refreshUpdateInfo, updateInfo } from '@/composables/openboxUpdate'
+import { DARK_THEME, theme } from '@/store/settings'
 import logoUrl from '@/assets/logo.png'
 import {
   ArrowPathIcon,
@@ -342,21 +350,38 @@ const thisDevice = computed(() => {
   const text = [osName.value, arch].filter(Boolean).join(' · ')
   return text ? t('routerPlatformThisVersion', { version: text }) : ''
 })
-const isSystemd = computed(() => serviceStatus.value?.platform === 'systemd')
+// 本机跑在哪种环境:openwrt / systemd(Linux)/ container(Docker);老服务端没有 platform 时按 openwrt 处理
+const platformKind = computed(() => serviceStatus.value?.platform || 'openwrt')
+// 「Ubuntu 22.04 / Debian 12 · x64 / arm64」里的空格换成不换行空格,窄卡片里只在「/」「·」处换行
+const nbsp = (text: string) =>
+  text
+    .split(' · ')
+    .map((part) => part.split(' / ').map((item) => item.replace(/ /g, '\u00a0')).join(' / '))
+    .join(' · ')
 const platformCards = computed(() => [
   {
     id: 'openwrt' as const,
     title: 'OpenWrt',
+    icon: 'brand:openwrt',
     req: t('routerPlatformReqOpenwrt'),
     hint: t('routerPlatformHintOpenwrt'),
-    current: !isSystemd.value,
+    current: platformKind.value === 'openwrt',
   },
   {
     id: 'linux' as const,
     title: 'Linux',
+    icon: theme.value === DARK_THEME ? 'brand:linux-color-light' : 'brand:linux-color',
     req: t('routerPlatformReqLinux'),
     hint: t('routerPlatformHintLinux'),
-    current: isSystemd.value,
+    current: platformKind.value === 'systemd',
+  },
+  {
+    id: 'docker' as const,
+    title: 'Docker',
+    icon: 'brand:docker',
+    req: 'Linux · x64 / arm64',
+    hint: t('dockerAccessHint', { ip: serviceStatus.value?.container?.lanIp || '' }),
+    current: platformKind.value === 'container',
   },
 ])
 </script>
