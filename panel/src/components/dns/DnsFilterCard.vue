@@ -1,47 +1,49 @@
 <template>
   <section class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <div class="flex flex-wrap items-center gap-2">
-          <h2 class="text-base font-semibold">{{ $t('dfTitle') }}</h2>
-          <input
-            type="checkbox"
-            class="toggle toggle-sm shrink-0"
-            :aria-label="$t('dfTitle')"
-            :checked="status.settings.enabled"
-            :disabled="saving || busy"
-            @change="toggle"
-          />
-          <span
-            class="badge badge-sm"
-            :class="status.settings.enabled ? 'badge-success' : ''"
-            >{{ $t(status.settings.enabled ? 'dfEnabled' : 'dfDisabled') }}</span
-          >
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <div class="flex flex-wrap items-center gap-2">
+            <h2 class="text-base font-semibold">{{ $t('dfTitle') }}</h2>
+            <input
+              type="checkbox"
+              class="toggle toggle-sm shrink-0"
+              :aria-label="$t('dfTitle')"
+              :checked="status.settings.enabled"
+              :disabled="saving || busy"
+              @change="toggle"
+            />
+            <span
+              class="badge badge-sm"
+              :class="status.settings.enabled ? 'badge-success' : ''"
+              >{{ $t(status.settings.enabled ? 'dfEnabled' : 'dfDisabled') }}</span
+            >
+          </div>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              v-tip="$t('dfUpdate')"
+              type="button"
+              class="btn btn-ghost btn-square btn-sm"
+              :disabled="busy || saving || !status.settings.lists.some((l) => l.enabled)"
+              :aria-label="$t('dfUpdate')"
+              @click="$emit('update')"
+            >
+              <ArrowPathIcon class="h-4 w-4" />
+            </button>
+            <button
+              v-tip="$t('dfAdd')"
+              type="button"
+              class="btn btn-primary btn-sm btn-square"
+              :disabled="busy || saving"
+              :aria-label="$t('dfAdd')"
+              @click="edit()"
+            >
+              <PlusIcon class="h-4 w-4" />
+            </button>
+          </div>
         </div>
-        <div class="flex shrink-0 items-center gap-1">
-          <button
-            v-tip="$t('dfUpdate')"
-            type="button"
-            class="btn btn-ghost btn-square btn-sm"
-            :disabled="busy || saving || !status.settings.lists.some((l) => l.enabled)"
-            :aria-label="$t('dfUpdate')"
-            @click="$emit('update')"
-          >
-            <ArrowPathIcon class="h-4 w-4" />
-          </button>
-          <button
-            v-tip="$t('dfAdd')"
-            type="button"
-            class="btn btn-primary btn-sm btn-square"
-            :disabled="busy || saving"
-            :aria-label="$t('dfAdd')"
-            @click="edit()"
-          >
-            <PlusIcon class="h-4 w-4" />
-          </button>
-        </div>
+        <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dfDescription') }}</p>
       </div>
-      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dfDescription') }}</p>
       <p
         v-if="!status.settings.lists.length"
         class="text-base-content/50 text-xs"

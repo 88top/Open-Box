@@ -1,44 +1,46 @@
 <template>
   <section class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <div class="flex flex-wrap items-center justify-between gap-3">
-        <h2 class="text-base font-semibold">{{ $t('dfRecords') }}</h2>
-        <form
-          class="flex flex-wrap gap-2"
-          @submit.prevent="searchRecords"
-        >
-          <input
-            v-model="search"
-            type="search"
-            class="input input-sm w-52"
-            :placeholder="$t('dfSearch')"
-            :aria-label="$t('dfSearch')"
-          />
-          <select
-            v-model="result"
-            class="select select-sm w-32"
-            :aria-label="$t('dfResult')"
-            @change="searchRecords"
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center justify-between gap-3">
+          <h2 class="text-base font-semibold">{{ $t('dfRecords') }}</h2>
+          <form
+            class="flex flex-wrap gap-2"
+            @submit.prevent="searchRecords"
           >
-            <option value="">{{ $t('dfAllResults') }}</option>
-            <option value="blocked">{{ $t('dfBlocked') }}</option>
-            <option value="allowed">{{ $t('dfAllowed') }}</option>
-            <option value="dnsmasq">{{ $t('dfDnsmasqAnswered') }}</option>
-            <option value="error">{{ $t('dfError') }}</option>
-            <option value="unknown">{{ $t('dfUnknown') }}</option>
-          </select>
-          <button
-            v-tip="$t('dfQuery')"
-            class="btn btn-ghost btn-square btn-sm"
-            :disabled="loading"
-            type="submit"
-            :aria-label="$t('dfQuery')"
-          >
-            <ArrowPathIcon class="h-4 w-4" />
-          </button>
-        </form>
+            <input
+              v-model="search"
+              type="search"
+              class="input input-sm w-52"
+              :placeholder="$t('dfSearch')"
+              :aria-label="$t('dfSearch')"
+            />
+            <select
+              v-model="result"
+              class="select select-sm w-32"
+              :aria-label="$t('dfResult')"
+              @change="searchRecords"
+            >
+              <option value="">{{ $t('dfAllResults') }}</option>
+              <option value="blocked">{{ $t('dfBlocked') }}</option>
+              <option value="allowed">{{ $t('dfAllowed') }}</option>
+              <option value="dnsmasq">{{ $t('dfDnsmasqAnswered') }}</option>
+              <option value="error">{{ $t('dfError') }}</option>
+              <option value="unknown">{{ $t('dfUnknown') }}</option>
+            </select>
+            <button
+              v-tip="$t('dfQuery')"
+              class="btn btn-ghost btn-square btn-sm"
+              :disabled="loading"
+              type="submit"
+              :aria-label="$t('dfQuery')"
+            >
+              <ArrowPathIcon class="h-4 w-4" />
+            </button>
+          </form>
+        </div>
+        <p class="text-base-content/60 text-xs">{{ $t('dfRecordHint') }}</p>
       </div>
-      <p class="text-base-content/60 text-xs">{{ $t('dfRecordHint') }}</p>
       <p
         v-if="(queryLog?.reason === 'user' && !queryLog?.syslog) || queryLog?.reason === 'failed'"
         class="text-base-content/60 text-xs"
