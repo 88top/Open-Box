@@ -3,7 +3,7 @@
     <div class="card-body gap-3 p-4">
       <div>
         <h2 class="text-base font-semibold">{{ $t('testUrlTitle') }}</h2>
-        <p class="text-base-content/60 text-xs">{{ $t('testUrlDescription') }}</p>
+        <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('testUrlDescription') }}</p>
       </div>
 
       <div class="flex flex-col gap-3 sm:flex-row">
