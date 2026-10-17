@@ -45,7 +45,7 @@ export default defineComponent({
 
       // 和搜索框同一行(手机上也是):搜索框 flex-1 让位,四个按钮不换行
       const quickSites = (
-        <div class="ml-auto flex shrink-0 items-center gap-1">
+        <div class="ml-auto flex shrink-0 items-center gap-2">
           {QUICK_SITES.map((site) => (
             <button
               key={site.id}
