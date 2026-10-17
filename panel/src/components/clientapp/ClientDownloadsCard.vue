@@ -10,7 +10,7 @@
           :key="tile.key"
           v-bind="tile.attrs"
           :title="tile.hint"
-          class="border-base-content/10 bg-base-100/60 flex items-center gap-2 rounded-lg border px-3 py-2.5"
+          class="border-base-300/60 bg-base-100 flex items-center gap-2 rounded-lg border px-3 py-2.5"
           :class="tile.available ? 'hover:bg-base-200/60 transition-colors' : 'cursor-not-allowed'"
         >
           <!-- eslint-disable-next-line vue/no-v-html -->

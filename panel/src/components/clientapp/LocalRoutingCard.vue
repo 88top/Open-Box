@@ -75,7 +75,7 @@
           />
         </button>
       </div>
-      <div class="border-base-content/10 flex items-center justify-between gap-3 border-t pt-3">
+      <div class="border-base-300/60 flex items-center justify-between gap-3 border-t pt-3">
         <div class="flex min-w-0 flex-col">
           <span class="text-sm">{{ $t('clientSystemDns') }}</span>
           <span class="text-base-content/60 mt-1 text-xs">{{ $t('clientSystemDnsHint') }}</span>
