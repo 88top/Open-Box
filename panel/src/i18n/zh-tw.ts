@@ -101,7 +101,7 @@ const zhTW: LANG_MESSAGE = {
   blockQuicTitle: '封鎖 QUIC',
   blockQuicDescription: '走代理線路的 QUIC(UDP 443)直接拒絕,瀏覽器會自動退回 TCP。不少節點轉發 UDP 很差,YouTube 等走 QUIC 反而卡;直連的站點不受影響。',
   directBypassTitle: '直連不進內核',
-  directBypassDescription: '直連流量在入口就放走、不經過內核轉發,吞吐可能翻倍;代價是這部分流量內核看不到——連線頁、流量洞察、各項統計都不會有它們。關掉後所有流量進內核,統計完整,但速度受內核轉發能力限制。',
+  directBypassDescription: '直連流量在入口就放走、不經過核心轉發,吞吐可能翻倍;代價是這部分流量核心看不到——連線頁、流量洞察、各項統計裡都不會有它們。關掉後所有流量進核心,統計完整,但速度受核心轉發能力限制。',
   directBypassNeedsFakeIp: '提示:FakeIP 沒開(或 DNS 接管關閉)時,入口只放行此刻走直連的站點集裡的 IP 集合,放行範圍比預設小。',
   bypassPortsModeBlacklist: '黑名單',
   bypassPortsModeWhitelist: '白名單',

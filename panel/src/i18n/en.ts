@@ -96,7 +96,7 @@ const en = {
   blockQuicTitle: 'Block QUIC',
   blockQuicDescription: 'Reject QUIC (UDP 443) on proxied routes outright so browsers fall back to TCP. Many nodes forward UDP poorly, so QUIC-heavy sites such as YouTube can stall; directly routed sites are unaffected.',
   directBypassTitle: 'Direct traffic bypasses the kernel',
-  directBypassDescription: 'Direct traffic is let through at the entry point without going through the kernel, which can roughly double throughput. The trade-off is that the kernel cannot see this traffic: it will not appear on the Connections page, in traffic insights or in any statistics. Turn it off to send all traffic through the kernel for complete statistics, at the cost of speed limited by kernel forwarding.',
+  directBypassDescription: 'Direct traffic is released at the entry and never forwarded by the core, which can double throughput; the trade-off is that the core cannot see it — it will not show up on the connections page, traffic insight or any statistics. Turn it off to send everything through the core: complete statistics, but speed is bounded by the core.',
   directBypassNeedsFakeIp: 'Note: when FakeIP is off (or DNS takeover is disabled), the entry point only lets through the IP sets of site sets currently routed direct, which is a narrower range than the default.',
   bypassPortsModeBlacklist: 'Blacklist',
   bypassPortsModeWhitelist: 'Whitelist',

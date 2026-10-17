@@ -112,7 +112,7 @@ const zh: LANG_MESSAGE = {
   trafficRetentionNoData: '还没有攒下数据,内核跑起来之后才开始记。',
   testUrlTitle: '测速地址',
   directBypassTitle: '直连不进内核',
-  directBypassDescription: '直连流量在入口就放走、不经过内核转发,吞吐可能翻倍;代价是这部分流量内核看不到——连接页、流量洞察、各项统计都不会有它们。关掉后所有流量进内核,统计完整,但速度受内核转发能力限制。',
+  directBypassDescription: '直连流量在入口就放走、不经过内核转发,吞吐可能翻倍;代价是这部分流量内核看不到——连接页、流量洞察、各项统计里都不会有它们。关掉后所有流量进内核,统计完整,但速度受内核转发能力限制。',
   directBypassNeedsFakeIp: '提示:FakeIP 没开(或 DNS 接管关闭)时,入口只放行此刻走直连的站点集里的 IP 集合,放行范围比默认小。',
   blockQuicTitle: '屏蔽 QUIC',
   blockQuicDescription: '走代理线路的 QUIC(UDP 443)直接拒绝,浏览器会自动退回 TCP。不少节点转发 UDP 很差,YouTube 等走 QUIC 反而卡;直连的站点不受影响。',
