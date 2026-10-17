@@ -52,7 +52,14 @@
                   v-if="p.current && thisDevice"
                   class="text-base-content/60 max-w-full truncate text-xs leading-4 tabular-nums"
                 >
-                  {{ thisDevice }}
+                  <i18n-t
+                    keypath="routerPlatformThisVersion"
+                    tag="span"
+                  >
+                    <template #version>
+                      <span class="text-base-content">{{ thisDeviceText }}</span>
+                    </template>
+                  </i18n-t>
                 </span>
               </span>
               <span class="platform-tile-req text-base-content/50 text-xs leading-4 break-keep">{{ nbsp(p.req) }}</span>
@@ -79,8 +86,8 @@
         </ul>
       </div>
 
-      <!-- 内核版本 + sing-box 项目链接 -->
-      <div class="flex flex-wrap items-center gap-x-2 gap-y-1">
+      <!-- 内核版本 + sing-box 项目链接(文字、图标、间距与 v0.1.337 一致) -->
+      <div class="flex items-center gap-2">
         <CpuChipIcon class="text-base-content/60 h-4 w-4 shrink-0" />
         <span class="text-base-content/70">{{ $t('kernelVersionLabel') }}:</span>
         <span class="font-medium">{{ kernelText }}</span>
@@ -88,45 +95,50 @@
           href="https://github.com/SagerNet/sing-box"
           target="_blank"
           rel="noopener noreferrer"
-          class="hover:bg-base-200 inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5"
+          class="text-base-content/70 hover:text-primary inline-flex items-center gap-1.5 rounded-md px-1 py-0.5"
+          aria-label="sing-box GitHub"
           v-tip="$t('singboxGithubHint')"
         >
           <GithubIcon class="h-4 w-4" />
           <span>{{ $t('singboxGithubLabel') }}</span>
-          <ArrowTopRightOnSquareIcon class="text-base-content/50 h-3.5 w-3.5" />
+          <ArrowTopRightOnSquareIcon class="h-4 w-4" />
         </a>
       </div>
 
       <!-- Geo 数据:份数、数据日期、数据来源 -->
       <div
         v-if="updateInfo?.geoCounts || updateInfo?.geoDate"
-        class="text-base-content/70 flex flex-wrap items-center gap-x-4 gap-y-1"
+        class="flex flex-wrap items-center gap-x-4 gap-y-1"
       >
         <span
           v-if="updateInfo.geoCounts"
-          class="inline-flex items-center gap-1.5"
+          class="flex items-center gap-2"
         >
-          <MapIcon class="h-4 w-4 shrink-0" />
-          {{ $t('geoSiteCount', { count: updateInfo.geoCounts.geosite }) }}
+          <MapIcon class="text-base-content/60 h-4 w-4 shrink-0" />
+          <span class="text-base-content/60">{{ $t('geoSiteCount', { count: updateInfo.geoCounts.geosite }) }}</span>
         </span>
         <span
           v-if="updateInfo.geoCounts"
-          class="inline-flex items-center gap-1.5"
+          class="flex items-center gap-2"
         >
-          <CircleStackIcon class="h-4 w-4 shrink-0" />
-          {{ $t('geoIpCount', { count: updateInfo.geoCounts.geoip }) }}
+          <CircleStackIcon class="text-base-content/60 h-4 w-4 shrink-0" />
+          <span class="text-base-content/60">{{ $t('geoIpCount', { count: updateInfo.geoCounts.geoip }) }}</span>
         </span>
-        <span v-if="updateInfo.geoDate">{{ updateInfo.geoDate }}</span>
+        <span
+          v-if="updateInfo.geoDate"
+          class="text-base-content/60"
+        >{{ updateInfo.geoDate }}</span>
         <a
           href="https://github.com/MetaCubeX/meta-rules-dat"
           target="_blank"
           rel="noopener noreferrer"
-          class="hover:bg-base-200 inline-flex items-center gap-1.5 rounded-lg px-2 py-0.5"
+          class="text-base-content/60 hover:text-primary inline-flex items-center gap-1.5 rounded-md px-1 py-0.5"
+          aria-label="Geo 数据 GitHub"
           v-tip="$t('geoGithubHint')"
         >
           <GithubIcon class="h-4 w-4" />
           <span>{{ $t('geoGithubLabel') }}</span>
-          <ArrowTopRightOnSquareIcon class="text-base-content/50 h-3.5 w-3.5" />
+          <ArrowTopRightOnSquareIcon class="h-4 w-4" />
         </a>
       </div>
 
@@ -345,11 +357,8 @@ const osName = computed(() => {
     .filter(Boolean)
     .join(' ')
 })
-const thisDevice = computed(() => {
-  const arch = serviceStatus.value?.arch || ''
-  const text = [osName.value, arch].filter(Boolean).join(' · ')
-  return text ? t('routerPlatformThisVersion', { version: text }) : ''
-})
+const thisDeviceText = computed(() => [osName.value, serviceStatus.value?.arch || ''].filter(Boolean).join(' · '))
+const thisDevice = computed(() => thisDeviceText.value)
 // 本机跑在哪种环境:openwrt / systemd(Linux)/ container(Docker);老服务端没有 platform 时按 openwrt 处理
 const platformKind = computed(() => serviceStatus.value?.platform || 'openwrt')
 // 「Ubuntu 22.04 / Debian 12 · x64 / arm64」里的空格换成不换行空格,窄卡片里只在「/」「·」处换行
