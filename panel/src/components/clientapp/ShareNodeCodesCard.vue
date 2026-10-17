@@ -1,9 +1,9 @@
 <template>
   <!-- 节点分流(客户端):共享网络每台服务器一个码,点二维码在弹窗里看 -->
   <div class="app-card-inset flex flex-col gap-3">
-    <div>
+    <div class="flex flex-col gap-1">
       <span class="text-base font-semibold">{{ $t('clientAppShareTitle') }}</span>
-      <p class="text-base-content/60 mt-1 text-xs">{{ $t('clientAppShareHint') }}</p>
+      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('clientAppShareHint') }}</p>
     </div>
 
     <div
@@ -42,7 +42,7 @@
         </div>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :disabled="!r.code"
           v-tip="$t('clientAppShareScan')"
           @click="openQr(r)"
@@ -51,7 +51,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :disabled="!r.code"
           v-tip="$t('copyLink')"
           @click="copy(r.code)"

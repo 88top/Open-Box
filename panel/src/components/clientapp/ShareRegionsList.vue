@@ -1,30 +1,32 @@
 <template>
   <!-- 地区分流:紧凑列表(拖动排序 / 编辑 / 删除),细节在编辑弹窗里。每次操作整份保存,不用重启内核 -->
   <div class="app-card-inset flex flex-col gap-3">
-    <div class="flex items-center gap-2">
-      <span class="text-base font-semibold">{{ $t('clientAppRegionsTitle') }}</span>
-      <div class="ml-auto flex items-center gap-1">
-        <button
-          type="button"
-          class="btn btn-ghost btn-square btn-sm"
-          :disabled="saving"
-          v-tip="$t('clientAppResetDefault')"
-          @click="reset"
-        >
-          <ArrowUturnLeftIcon class="h-4 w-4" />
-        </button>
-        <button
-          type="button"
-          class="btn btn-primary btn-circle btn-sm"
-          :disabled="saving || list.length >= SHARE_REGION_LIMITS.groups"
-          v-tip="$t('clientAppAddGroup')"
-          @click="openEdit(null)"
-        >
-          <PlusIcon class="h-4 w-4" />
-        </button>
+    <div class="flex flex-col gap-1">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <span class="text-base font-semibold">{{ $t('clientAppRegionsTitle') }}</span>
+        <div class="flex shrink-0 items-center gap-1">
+          <button
+            type="button"
+            class="btn btn-ghost btn-square btn-sm"
+            :disabled="saving"
+            v-tip="$t('clientAppResetDefault')"
+            @click="reset"
+          >
+            <ArrowUturnLeftIcon class="h-4 w-4" />
+          </button>
+          <button
+            type="button"
+            class="btn btn-primary btn-circle btn-sm"
+            :disabled="saving || list.length >= SHARE_REGION_LIMITS.groups"
+            v-tip="$t('clientAppAddGroup')"
+            @click="openEdit(null)"
+          >
+            <PlusIcon class="h-4 w-4" />
+          </button>
+        </div>
       </div>
+      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('clientAppRegionsHint') }}</p>
     </div>
-    <p class="text-base-content/60 text-xs">{{ $t('clientAppRegionsHint') }}</p>
 
     <Draggable
       v-model="list"
@@ -76,7 +78,7 @@
           </div>
           <button
             type="button"
-            class="btn btn-ghost btn-square btn-sm"
+            class="btn btn-ghost btn-square btn-xs"
             v-tip="$t('edit')"
             @click="openEdit(element)"
           >
@@ -84,7 +86,7 @@
           </button>
           <button
             type="button"
-            class="btn btn-ghost btn-square btn-sm hover:text-error"
+            class="btn btn-ghost btn-square btn-xs hover:text-error"
             v-tip="$t('delete')"
             @click="remove(element)"
           >
