@@ -246,6 +246,17 @@ export const fetchContentFilter = () =>
 export const fetchContentFilterSource = (id: string) =>
   requestJson<{ text: string }>(`/api/openbox/content-filter/${id}/source`)
 
+// 解析:后端抓取规则链接并按所选格式校验,返回规则文本(不落盘、不保存)
+export const previewContentFilter = (input: {
+  dialect: OpenboxContentFilterDialect
+  sourceUrl: string
+  arguments?: Record<string, unknown>
+}) =>
+  requestJson<{ text: string }>('/api/openbox/content-filter/preview', {
+    method: 'POST',
+    body: JSON.stringify(input),
+  })
+
 export const saveContentFilter = (input: OpenboxContentFilterInput) =>
   requestJson<OpenboxContentFilterList>('/api/openbox/content-filter', {
     method: 'POST',

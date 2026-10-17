@@ -197,16 +197,32 @@
             </option>
           </select>
         </label>
-        <label class="flex flex-col gap-1">
-          <span>{{ $t('cfUrl') }}</span>
-          <input
-            v-model="form.sourceUrl"
-            class="input input-bordered w-full"
-            :disabled="busy"
-            type="url"
-            placeholder="https://…"
-          />
-        </label>
+        <div class="flex flex-col gap-1">
+          <label for="content-filter-url">{{ $t('cfUrl') }}</label>
+          <div class="flex items-center gap-2">
+            <input
+              id="content-filter-url"
+              v-model="form.sourceUrl"
+              class="input input-bordered min-w-0 flex-1"
+              :disabled="busy"
+              type="url"
+              placeholder="https://…"
+            />
+            <button
+              type="button"
+              class="btn btn-primary shrink-0"
+              :disabled="busy || !form.sourceUrl.trim()"
+              @click="fetchSource('parse')"
+            >
+              <span
+                v-if="pending === 'parse'"
+                class="loading loading-spinner loading-xs"
+                aria-hidden="true"
+              />
+              {{ $t('cfParse') }}
+            </button>
+          </div>
+        </div>
         <label class="flex flex-col gap-1">
           <span>{{ $t('cfFile') }}</span>
           <input
@@ -238,14 +254,28 @@
           {{ $t('cancel') }}
         </button>
         <button
+          type="button"
+          class="btn btn-ghost"
+          :disabled="busy || !form.sourceUrl.trim()"
+          @click="fetchSource('update')"
+        >
+          <span
+            v-if="pending === 'update'"
+            class="loading loading-spinner loading-xs"
+            aria-hidden="true"
+          />
+          {{ $t('cfUpdate') }}
+        </button>
+        <button
           type="submit"
           form="content-filter-editor"
           class="btn btn-primary"
-          :disabled="busy"
+          :disabled="!canSave"
         >
           <span
-            v-if="busy"
+            v-if="saving"
             class="loading loading-spinner loading-xs"
+            aria-hidden="true"
           />
           {{ $t('cfSave') }}
         </button>
@@ -284,6 +314,7 @@ import {
   deleteContentFilter,
   fetchContentFilter,
   fetchContentFilterSource,
+  previewContentFilter,
   restoreContentFilterDefaults,
   saveContentFilter,
   setContentFilterEnabled,
@@ -302,7 +333,7 @@ import {
   ShieldCheckIcon,
   TrashIcon,
 } from '@heroicons/vue/24/outline'
-import { onMounted, reactive, ref } from 'vue'
+import { computed, onMounted, reactive, ref } from 'vue'
 
 const FILE_MAX_BYTES = 512 * 1024
 
@@ -329,6 +360,23 @@ const form = reactive({
   text: '',
   arguments: {} as Record<string, unknown>,
 })
+
+// 打开弹窗时的表单快照:有改动且名称、内容(或链接)齐全才允许保存
+const baseline = ref<string | null>(null)
+const pending = ref<'parse' | 'update' | null>(null)
+const saving = ref(false)
+
+const formKey = () =>
+  JSON.stringify([form.name.trim(), form.dialect, form.sourceUrl.trim(), form.text, form.arguments])
+
+const canSave = computed(
+  () =>
+    !busy.value &&
+    baseline.value !== null &&
+    formKey() !== baseline.value &&
+    !!form.name.trim() &&
+    !!(form.text.trim() || form.sourceUrl.trim()),
+)
 
 const dialectLabel = (value: string) => dialects.find((d) => d.value === value)?.label ?? value
 
@@ -361,6 +409,8 @@ const run = async (action: () => Promise<OpenboxContentFilterList>, doneKey = 'c
 }
 
 const openEditor = async (set?: OpenboxContentFilterSet) => {
+  if (busy.value || loading.value) return
+  baseline.value = null
   Object.assign(form, {
     id: set?.id || '',
     name: set?.name || '',
@@ -370,10 +420,14 @@ const openEditor = async (set?: OpenboxContentFilterSet) => {
     arguments: { ...set?.arguments?.values },
   })
   editorOpen.value = true
-  if (!set) return
+  if (!set) {
+    baseline.value = formKey()
+    return
+  }
   busy.value = true
   try {
     form.text = (await fetchContentFilterSource(set.id)).text
+    baseline.value = formKey()
   } catch (error) {
     notifyFailed(error)
   } finally {
@@ -392,11 +446,41 @@ const onFile = async (event: Event) => {
   if (!form.name) form.name = file.name
 }
 
+// 解析 / 更新:抓取规则链接并校验,把规则文本读进编辑框(还没保存,点「保存」才生效)
+const fetchSource = async (kind: 'parse' | 'update') => {
+  const sourceUrl = form.sourceUrl.trim()
+  if (busy.value || !sourceUrl) return
+  busy.value = true
+  pending.value = kind
+  try {
+    const res = await previewContentFilter({
+      dialect: form.dialect,
+      sourceUrl,
+      arguments: form.arguments,
+    })
+    if (editorOpen.value) {
+      form.text = res.text
+      showNotification({ content: 'cfLoaded', type: 'alert-success' })
+    }
+  } catch (error) {
+    notifyFailed(error)
+  } finally {
+    pending.value = null
+    busy.value = false
+  }
+}
+
 const save = async () => {
-  const ok = await run(() =>
-    saveContentFilter({ ...form, id: form.id || undefined, text: form.text || undefined }),
-  )
-  if (ok) editorOpen.value = false
+  if (!canSave.value) return
+  saving.value = true
+  try {
+    const ok = await run(() =>
+      saveContentFilter({ ...form, id: form.id || undefined, text: form.text || undefined }),
+    )
+    if (ok) editorOpen.value = false
+  } finally {
+    saving.value = false
+  }
 }
 
 const refresh = (set: OpenboxContentFilterSet) =>
