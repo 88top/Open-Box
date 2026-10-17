@@ -3,32 +3,34 @@
        改完即保存:先让内核按所选协议真的查一次,查不通不保存。 -->
   <div class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
-      <div class="flex flex-wrap items-center justify-between gap-2">
-        <h2 class="text-base font-semibold">{{ $t('dnsUpstreamTitle') }}</h2>
-        <div class="flex shrink-0 items-center gap-1">
-          <button
-            v-tip="$t('dnsUpstreamRestore')"
-            type="button"
-            class="btn btn-ghost btn-square btn-sm"
-            :disabled="busy"
-            :aria-label="$t('dnsUpstreamRestore')"
-            @click="restoreOpen = true"
-          >
-            <ArrowUturnLeftIcon class="h-4 w-4" />
-          </button>
-          <button
-            v-tip="$t('dnsUpstreamAdd')"
-            type="button"
-            class="btn btn-primary btn-sm btn-square shrink-0"
-            :disabled="busy"
-            :aria-label="$t('dnsUpstreamAdd')"
-            @click="openEditor(null)"
-          >
-            <PlusIcon class="h-4 w-4" />
-          </button>
+      <div class="flex flex-col gap-1">
+        <div class="flex flex-wrap items-center justify-between gap-2">
+          <h2 class="text-base font-semibold">{{ $t('dnsUpstreamTitle') }}</h2>
+          <div class="flex shrink-0 items-center gap-1">
+            <button
+              v-tip="$t('dnsUpstreamRestore')"
+              type="button"
+              class="btn btn-ghost btn-square btn-sm"
+              :disabled="busy"
+              :aria-label="$t('dnsUpstreamRestore')"
+              @click="restoreOpen = true"
+            >
+              <ArrowUturnLeftIcon class="h-4 w-4" />
+            </button>
+            <button
+              v-tip="$t('dnsUpstreamAdd')"
+              type="button"
+              class="btn btn-primary btn-sm btn-square shrink-0"
+              :disabled="busy"
+              :aria-label="$t('dnsUpstreamAdd')"
+              @click="openEditor(null)"
+            >
+              <PlusIcon class="h-4 w-4" />
+            </button>
+          </div>
         </div>
+        <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dnsUpstreamDescription') }}</p>
       </div>
-      <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('dnsUpstreamDescription') }}</p>
       <div class="flex flex-col gap-1">
         <div class="flex flex-wrap items-center gap-2">
           <span class="text-xs font-medium">{{ $t('dnsRegionLabel') }}</span>

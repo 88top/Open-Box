@@ -3,7 +3,7 @@
   <div class="card bg-base-100 border-base-300/60 border">
     <div class="card-body gap-3 p-4 text-sm">
       <div class="flex items-center justify-between gap-2">
-        <div>
+        <div class="flex flex-col gap-1">
           <h2 class="text-base font-semibold">{{ $t('dnsModeTitle') }}（{{ $t('dnsModePort', { port: KERNEL_DNS_PORT }) }}）</h2>
           <p class="text-base-content/60 text-xs">{{ $t('dnsModeDescription') }}</p>
         </div>
