@@ -83,7 +83,7 @@ export const clientAppPageZh = {
   clientAppLocalNoLan: '没读到路由器的局域网地址:请用公网地址(域名)打开面板再扫码,不然 App 连不上面板。',
   clientAppLastSync: '最后同步 {time}',
   clientAppNeverSynced: '还没同步过',
-  clientAppShowQr: '二维码',
+  clientAppShowQr: '扫码',
 
   // 地区组规则页签(对照上游 v0.1.331)
   clientAppErrRule: '第 {index} 条规则的值不对:{value}',

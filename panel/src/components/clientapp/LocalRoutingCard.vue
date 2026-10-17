@@ -33,7 +33,7 @@
           class="btn btn-ghost btn-square btn-sm"
           :class="issue.enabled ? 'text-success' : 'text-base-content/40'"
           :disabled="toggling"
-          v-tip="$t(issue.enabled ? 'clientAppSyncOn' : 'clientAppSyncOff')"
+          v-tip.contain="$t(issue.enabled ? 'clientAppSyncOn' : 'clientAppSyncOff')"
           @click="toggleEnabled"
         >
           <PowerIcon class="h-4 w-4" />
@@ -42,7 +42,7 @@
           type="button"
           class="btn btn-ghost btn-square btn-sm"
           :disabled="!code"
-          v-tip="$t('clientAppShowQr')"
+          v-tip.contain="$t('clientAppShowQr')"
           @click="showQr = true"
         >
           <QrCodeIcon class="h-4 w-4" />
@@ -51,7 +51,7 @@
           type="button"
           class="btn btn-ghost btn-square btn-sm"
           :disabled="!code"
-          v-tip="$t('copyLink')"
+          v-tip.contain="$t('copyLink')"
           @click="copy(code)"
         >
           <ClipboardDocumentIcon class="h-4 w-4" />
@@ -60,7 +60,7 @@
           type="button"
           class="btn btn-ghost btn-square btn-sm"
           :disabled="!code || exporting"
-          v-tip="$t('clientAppExport')"
+          v-tip.contain="$t('clientAppExport')"
           @click="exportFile"
         >
           <span
