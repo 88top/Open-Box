@@ -2,8 +2,10 @@
   <!-- 本地分流(客户端):一行 = 设备图标 + 名称 + 最后同步 + 开关 / 二维码 / 复制链接 / 导出文件 -->
   <div class="card">
     <div class="app-card-inset flex flex-col gap-3">
-      <span class="text-base font-semibold">{{ $t('clientAppLocalTitle') }}</span>
-      <p class="text-base-content/60 text-xs">{{ $t('clientAppLocalHint') }}</p>
+      <div class="flex flex-col gap-1">
+        <span class="text-base font-semibold">{{ $t('clientAppLocalTitle') }}</span>
+        <p class="text-base-content/60 text-xs leading-relaxed">{{ $t('clientAppLocalHint') }}</p>
+      </div>
 
       <div
         v-if="loading"
@@ -13,7 +15,7 @@
       </div>
       <div
         v-else-if="issue"
-        class="flex items-center gap-2"
+        class="flex items-center gap-2 py-2"
       >
         <DevicePhoneMobileIcon class="text-base-content/50 h-4 w-4 shrink-0" />
         <div class="flex min-w-0 flex-1 flex-wrap items-center gap-x-3 gap-y-0.5 text-sm">
@@ -30,7 +32,7 @@
         </div>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :class="issue.enabled ? 'text-success' : 'text-base-content/40'"
           :disabled="toggling"
           v-tip.contain="$t(issue.enabled ? 'clientAppSyncOn' : 'clientAppSyncOff')"
@@ -40,7 +42,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :disabled="!code"
           v-tip.contain="$t('clientAppShowQr')"
           @click="showQr = true"
@@ -49,7 +51,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :disabled="!code"
           v-tip.contain="$t('copyLink')"
           @click="copy(code)"
@@ -58,7 +60,7 @@
         </button>
         <button
           type="button"
-          class="btn btn-ghost btn-square btn-sm"
+          class="btn btn-ghost btn-square btn-xs"
           :disabled="!code || exporting"
           v-tip.contain="$t('clientAppExport')"
           @click="exportFile"
