@@ -24,51 +24,46 @@
         :title="$t('tunAdvancedButton')"
         box-class="w-full max-w-2xl"
       >
-        <div class="flex flex-col gap-4 text-sm">
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-3">
-              <label class="w-[7.5rem] shrink-0">{{ $t('tunStackLabel') }}</label>
-              <select
-                class="select select-sm w-36"
-                :value="stack"
-                @change="onStack"
-              >
-                <option value="mixed">mixed</option>
-                <option value="gvisor">gvisor</option>
-                <option value="system">system</option>
-              </select>
-            </div>
-            <p class="text-base-content/60 text-xs">{{ $t('tunStackNote') }}</p>
+        <!-- 结构与 v0.1.337 一致:行间距 gap-3,每行「标签 + 控件」gap-2 可换行,说明独占一行 -->
+        <div class="flex flex-col gap-3 text-sm">
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="w-28 shrink-0 text-sm">{{ $t('tunStackLabel') }}</label>
+            <select
+              class="select select-sm w-36"
+              :value="stack"
+              @change="onStack"
+            >
+              <option value="mixed">mixed</option>
+              <option value="gvisor">gvisor</option>
+              <option value="system">system</option>
+            </select>
+            <p class="text-base-content/60 basis-full text-xs">{{ $t('tunStackNote') }}</p>
           </div>
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-3">
-              <label class="w-[7.5rem] shrink-0">{{ $t('tunMtuLabel') }}</label>
-              <input
-                v-model="mtuText"
-                type="number"
-                min="0"
-                :max="MTU_MAX"
-                class="input input-sm w-28"
-                placeholder="0"
-                @change="saveNumber('mtu')"
-              />
-            </div>
-            <p class="text-base-content/60 text-xs">{{ $t('tunMtuNote') }}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="w-28 shrink-0 text-sm">{{ $t('tunMtuLabel') }}</label>
+            <input
+              v-model="mtuText"
+              type="number"
+              min="0"
+              :max="MTU_MAX"
+              class="input input-sm w-28"
+              placeholder="0"
+              @change="saveNumber('mtu')"
+            />
+            <p class="text-base-content/60 basis-full text-xs">{{ $t('tunMtuNote') }}</p>
           </div>
-          <div class="flex flex-col gap-1">
-            <div class="flex items-center gap-3">
-              <label class="w-[7.5rem] shrink-0">{{ $t('tunMssLabel') }}</label>
-              <input
-                v-model="mssText"
-                type="number"
-                min="0"
-                :max="MSS_MAX"
-                class="input input-sm w-28"
-                placeholder="0"
-                @change="saveNumber('tcpMss')"
-              />
-            </div>
-            <p class="text-base-content/60 text-xs">{{ $t('tunMssNote') }}</p>
+          <div class="flex flex-wrap items-center gap-2">
+            <label class="w-28 shrink-0 text-sm">{{ $t('tunMssLabel') }}</label>
+            <input
+              v-model="mssText"
+              type="number"
+              min="0"
+              :max="MSS_MAX"
+              class="input input-sm w-28"
+              placeholder="0"
+              @change="saveNumber('tcpMss')"
+            />
+            <p class="text-base-content/60 basis-full text-xs">{{ $t('tunMssNote') }}</p>
           </div>
         </div>
       </DialogWrapper>
