@@ -31,7 +31,7 @@
           <div
             v-if="(title || slots['title-left']) && isOpen"
             id="dialog-title"
-            class="border-base-content/10 relative flex shrink-0 items-center gap-2 border-b px-4 py-2 text-base font-bold"
+            class="after:border-base-content/10 relative flex shrink-0 items-center gap-2 px-4 py-2 text-base font-bold after:pointer-events-none after:absolute after:inset-x-4 after:bottom-0 after:border-b"
             :class="headerClass"
           >
             <slot name="title-left" />
@@ -65,7 +65,7 @@
           <!-- 底栏(可选):取消 / 保存这类按钮固定在内容区下面,内容多了只滚内容 -->
           <div
             v-if="slots.footer && isOpen"
-            class="border-base-content/10 flex shrink-0 items-center justify-end gap-2 border-t px-4 py-2"
+            class="before:border-base-content/10 relative flex shrink-0 items-center justify-end gap-2 px-4 py-2 before:pointer-events-none before:absolute before:inset-x-4 before:top-0 before:border-t"
             :class="footerClass"
           >
             <slot name="footer" />

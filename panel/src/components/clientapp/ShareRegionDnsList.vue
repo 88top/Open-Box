@@ -103,8 +103,6 @@
       v-model="editorOpen"
       :title="$t(editing ? 'dnsUpstreamEditTitle' : 'dnsUpstreamAddTitle')"
       box-class="w-full max-w-lg"
-      header-class="mx-4 px-0! [&>button]:right-[-0.5rem]!"
-      footer-class="mx-4 px-0!"
     >
       <div
         v-if="draft"

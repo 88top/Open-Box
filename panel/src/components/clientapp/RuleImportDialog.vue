@@ -4,8 +4,6 @@
     v-model="isOpen"
     :title="$t('routingPolicyRuleImportTitle')"
     box-class="w-full max-w-2xl"
-    header-class="mx-4 px-0! [&>button]:right-[-0.5rem]!"
-    footer-class="mx-4 px-0!"
   >
     <div class="flex flex-col gap-3">
       <p class="text-base-content/60 text-xs">{{ $t(hintKey, { max }) }}</p>

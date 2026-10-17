@@ -99,28 +99,28 @@
     >
       <div class="flex flex-col gap-3">
         <p class="text-sm">{{ $t('dnsRewriteRestoreConfirm') }}</p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showRestore = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-sm btn-error"
-            :disabled="saving"
-            @click="restoreDefaults"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('confirm') }}
-          </button>
-        </div>
       </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showRestore = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-sm btn-error"
+          :disabled="saving"
+          @click="restoreDefaults"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('confirm') }}
+        </button>
+      </template>
     </DialogWrapper>
 
     <DialogWrapper
@@ -175,54 +175,54 @@
           />
           <p class="text-base-content/50 text-xs">{{ $t(draft.kind === 'domain' ? 'dnsRewriteDomainHint' : 'dnsRewriteIpHint') }}</p>
         </div>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showEditor = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-primary btn-sm"
-            :disabled="saving"
-            @click="saveDraft"
-          >
-            <span
-              v-if="saving"
-              class="loading loading-spinner loading-xs"
-            />
-            {{ $t('subscriptionSave') }}
-          </button>
-        </div>
       </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showEditor = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-primary btn-sm"
+          :disabled="saving"
+          @click="saveDraft"
+        >
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
+          {{ $t('subscriptionSave') }}
+        </button>
+      </template>
     </DialogWrapper>
 
     <DialogWrapper
       v-model="showDelete"
       :title="$t('dnsRewriteDeleteTitle')"
     >
-      <div class="flex flex-col gap-4 p-2">
+      <div class="flex flex-col gap-4">
         <p class="text-sm">{{ $t('dnsRewriteDeleteConfirm', { source: pendingDelete?.source || '' }) }}</p>
-        <div class="flex justify-end gap-2">
-          <button
-            type="button"
-            class="btn btn-sm"
-            @click="showDelete = false"
-          >
-            {{ $t('cancel') }}
-          </button>
-          <button
-            type="button"
-            class="btn btn-error btn-sm"
-            :disabled="saving"
-            @click="confirmDelete"
-          >
-            {{ $t('confirm') }}
-          </button>
-        </div>
       </div>
+      <template #footer>
+        <button
+          type="button"
+          class="btn btn-sm"
+          @click="showDelete = false"
+        >
+          {{ $t('cancel') }}
+        </button>
+        <button
+          type="button"
+          class="btn btn-error btn-sm"
+          :disabled="saving"
+          @click="confirmDelete"
+        >
+          {{ $t('confirm') }}
+        </button>
+      </template>
     </DialogWrapper>
   </div>
 </template>
