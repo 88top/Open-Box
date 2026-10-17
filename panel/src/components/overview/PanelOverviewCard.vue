@@ -1,34 +1,37 @@
 <template>
   <!-- 面板概览:一张大卡,从上到下是站点延迟小卡、六项汇总、四张实时图(进站速率 / 出站速率 / 内存 / 连接数) -->
   <div class="card w-full">
-    <div class="flex flex-wrap items-center gap-2 px-4 pt-4">
-      <h2 class="text-base font-semibold">{{ $t('overviewPanelTitle') }}</h2>
-      <label class="text-base-content/70 flex cursor-pointer items-center gap-1.5 text-xs font-normal">
-        <span>{{ $t('overviewAutoTest') }}</span>
-        <input
-          v-model="autoSiteLatencyTest"
-          type="checkbox"
-          class="toggle toggle-xs toggle-primary"
-        />
-      </label>
-      <button
-        type="button"
-        class="btn btn-ghost btn-circle btn-sm ml-auto"
-        :disabled="siteLatencyLoading"
-        v-tip="$t('siteLatencyTest')"
-        @click="runSiteLatencyTest"
-      >
-        <span
-          v-if="siteLatencyLoading"
-          class="loading loading-spinner loading-xs"
-        />
-        <BoltIcon
-          v-else
-          class="h-4 w-4"
-        />
-      </button>
-    </div>
-    <div class="card-body gap-2">
+    <div class="card-body gap-3">
+      <div class="flex flex-wrap items-center justify-between gap-2">
+        <div class="flex flex-wrap items-center gap-2">
+          <h2 class="text-base font-semibold">{{ $t('overviewPanelTitle') }}</h2>
+          <label
+            class="text-base-content/70 flex cursor-pointer items-center gap-1.5 text-xs font-normal"
+            :title="$t('siteLatencyAutoTestHint')"
+          >
+            <span>{{ $t('overviewAutoTest') }}</span>
+            <input
+              v-model="autoSiteLatencyTest"
+              type="checkbox"
+              class="toggle toggle-xs toggle-primary"
+            />
+          </label>
+        </div>
+        <button
+          type="button"
+          class="btn btn-ghost btn-square btn-sm shrink-0"
+          :disabled="siteLatencyLoading"
+          :aria-label="$t('siteLatencyTestAll')"
+          v-tip="$t('siteLatencyTestAll')"
+          @click="() => runSiteLatencyTest()"
+        >
+          <span
+            v-if="siteLatencyLoading"
+            class="loading loading-spinner loading-xs"
+          />
+          <BoltIcon class="h-4 w-4" />
+        </button>
+      </div>
       <SiteLatencyTiles />
       <StatisticsStats type="overview" />
       <div class="grid grid-cols-1 gap-2 sm:grid-cols-2 xl:grid-cols-4">

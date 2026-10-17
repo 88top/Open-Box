@@ -1,93 +1,111 @@
 <template>
-  <!-- 四个站点延迟小卡:品牌标识 + 最近 10 次的小柱 + 站名 + 延迟 / 不通。
-       自动测速开关和 ⚡ 按钮在上面「面板概览」的标题栏里(PanelOverviewCard.vue) -->
-  <div class="grid grid-cols-2 gap-2 xl:grid-cols-4">
-    <div
-      v-for="card in cards"
-      :key="card.id"
-      class="border-base-300/60 bg-base-100 flex min-w-0 items-center gap-3 rounded-full border px-3 py-2.5"
-      :title="card.hint"
-    >
-      <span
-        v-if="showIcon"
-        class="flex h-9 w-9 shrink-0 items-center justify-center"
-      >
-        <CountryFlag
-          :code="card.icon"
-          :size="36"
-        />
-      </span>
-      <!-- 小柱容器占满图标和文字之间的空位、两端对齐(和 v0.1.308 一样):柱数按容器宽度算,
-           柱宽 6px、间距 2px;只有几根时也是一根贴左、一根居中、一根贴右 -->
-      <span
-        v-if="card.bars.length"
-        :ref="(el) => observe(el, card.id)"
-        class="flex h-[34px] min-w-0 flex-1 items-end justify-between gap-[2px]"
+  <!-- 四个站点延迟小卡(对齐 v0.1.337):品牌图标 + 最近若干次的小柱 + 站名 + 延迟 / 不通。
+       点哪张就只重测哪一张;自动测速开关和 ⚡ 按钮在上面「面板概览」的标题栏里(PanelOverviewCard.vue) -->
+  <div class="@container">
+    <div class="grid grid-cols-2 gap-3 @[900px]:grid-cols-4">
+      <div
+        v-for="card in cards"
+        :key="card.id"
+        class="bg-base-100 border-base-300/60 hover:border-base-content/20 active:bg-base-200/40 flex cursor-pointer items-center gap-3 rounded-xl border p-3 transition-[color,background-color,border-color,scale] duration-150 ease-out select-none active:scale-[0.98]"
+        role="button"
+        tabindex="0"
+        :aria-busy="card.loading"
+        @click="runSiteLatencyTest(card.id)"
+        @keydown.enter.prevent="runSiteLatencyTest(card.id)"
+        @keydown.space.prevent="runSiteLatencyTest(card.id)"
       >
         <span
-          v-for="(bar, i) in card.bars"
-          :key="i"
-          class="w-[6px] shrink-0 rounded-[1px]"
-          :class="bar.color"
-          :style="{ height: bar.height }"
-          :title="bar.title"
-        ></span>
-      </span>
-      <span
-        v-else
-        :ref="(el) => observe(el, card.id)"
-        class="min-w-0 flex-1"
-      ></span>
-      <span class="flex max-w-[55%] shrink-0 flex-col">
-        <span class="text-base-content/60 mb-1 truncate text-xs">{{ card.name }}</span>
-        <!-- 外层 text-xl 给数字用;「不通」嵌一层 text-base,比数字小一档 -->
+          v-if="showIcon"
+          class="bg-base-200/60 flex h-11 w-11 shrink-0 items-center justify-center rounded-xl"
+        >
+          <ProxyIcon
+            v-if="card.iconUrl"
+            :icon="card.iconUrl"
+            :size="28"
+            :margin="0"
+          />
+          <GlobeAltIcon
+            v-else
+            class="text-base-content/50 h-6 w-6"
+          />
+        </span>
+        <!-- 小柱容器占满图标和文字之间的空位、两端对齐:柱数按容器宽度算,柱宽 6px、间距 2px;
+             只有几根时也是一根贴左、一根居中、一根贴右 -->
         <span
-          class="text-xl leading-none font-semibold"
-          :class="card.color"
+          v-if="card.bars.length"
+          :ref="(el) => observe(el, card.id)"
+          class="flex h-[34px] min-w-0 flex-1 items-end justify-between gap-[2px]"
         >
           <span
-            v-if="siteLatencyLoading && card.ms === null"
-            class="loading loading-dots loading-sm text-base-content/60 my-1"
+            v-for="(bar, i) in card.bars"
+            :key="i"
+            v-tip="bar.tip"
+            class="w-[6px] shrink-0 rounded-[1px]"
+            :class="bar.color"
+            :style="{ height: bar.height }"
           ></span>
-          <span
-            v-else-if="card.ms !== null"
-            class="tabular-nums"
-          >
-            {{ card.ms }}<span class="text-base-content/50 ml-1 text-xs leading-none font-normal">ms</span>
-          </span>
-          <span
-            v-else-if="card.failed"
-            class="text-base"
-          >{{ $t('siteUnreachable') }}</span>
-          <span
-            v-else
-            class="text-base-content/40 font-normal"
-          >—</span>
         </span>
-      </span>
+        <span
+          v-else
+          :ref="(el) => observe(el, card.id)"
+          class="min-w-0 flex-1"
+        ></span>
+        <span class="flex max-w-[55%] shrink-0 flex-col">
+          <span class="text-base-content/60 mb-1 truncate text-xs">{{ card.label }}</span>
+          <span class="leading-none">
+            <span
+              v-if="card.loading && card.ms === undefined"
+              class="loading loading-dots loading-sm text-base-content/60 my-1"
+            ></span>
+            <span
+              v-else-if="card.ms === undefined"
+              class="text-base-content/40 text-xl leading-none tabular-nums"
+              >—</span
+            >
+            <span
+              v-else-if="card.ms === null"
+              class="text-xl leading-none font-semibold text-red-500 transition-opacity"
+              :class="card.loading && 'opacity-40'"
+            >
+              <span class="text-base leading-none">{{ $t('siteUnreachable') }}</span>
+            </span>
+            <span
+              v-else
+              class="text-xl leading-none font-semibold tabular-nums transition-opacity"
+              :class="[card.color, card.loading && 'opacity-40']"
+            >
+              {{ card.ms }}<span class="text-base-content/50 ml-1 text-xs leading-none font-normal">ms</span>
+            </span>
+          </span>
+        </span>
+      </div>
     </div>
   </div>
 </template>
 
 <script setup lang="ts">
-import CountryFlag from '@/components/common/CountryFlag.vue'
+import ProxyIcon from '@/components/proxies/ProxyIcon.vue'
 import {
   activeSites,
   autoSiteLatencyTest,
+  isValidSiteUrl,
   loadSiteHistory,
   runSiteLatencyTest,
   siteHistory,
-  siteLatencyLoading,
   siteResults,
   siteTimeoutMs,
+  testingSiteIds,
 } from '@/composables/siteLatency'
+import { brandName, findBrand } from '@/constant/brands'
 import { NOT_CONNECTED } from '@/constant'
 import { getColorForLatency } from '@/helper'
+import { iconUrlFor } from '@/helper/iconUrl'
+import { GlobeAltIcon } from '@heroicons/vue/24/outline'
 import dayjs from 'dayjs'
 import { computed, onBeforeUnmount, onMounted, ref } from 'vue'
 import { useI18n } from 'vue-i18n'
 
-const { t } = useI18n()
+const { locale, t } = useI18n()
 
 // 类名要写全,Tailwind 只编它在源码里见过的类
 const barColor = (delay: number) => {
@@ -110,7 +128,7 @@ const BAR_GAP = 2
 const BAR_EDGE = 1
 const MAX_BARS = 60
 const MIN_BARS = 8
-// 图标占的宽度(图标 36 + 间距 12 再留一点);容器放不下 MIN_BARS 根时把图标让出来
+// 图标占的宽度(图标 44 + 间距 12);容器放不下 MIN_BARS 根时把图标让出来
 const ICON_SPACE = 56
 // 柱子最矮不低于容器高度的 5%,不然几十毫秒的柱子会看不见
 const MIN_PCT = 5
@@ -159,32 +177,61 @@ const maxValue = computed(() =>
   Math.max(1, ...activeSites.value.flatMap((site) => visibleSamples(site.id).map((s) => effective(s.delay)))),
 )
 
+const escapeHtml = (text: string) =>
+  text.replace(/[&<>"']/g, (c) => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' })[c] as string)
+const delayText = (delay: number) => (delay === NOT_CONNECTED ? t('siteUnreachable') : `${delay} ms`)
+// 悬停小柱:上一行是当时走的线路(没记录就用这个站点最近一次有记录的),下一行是时间 · 延迟
+const barTip = (sample: { time: number; delay: number; node?: string }, fallbackNode: string) => {
+  const node = sample.node || fallbackNode
+  const lines: string[] = []
+  if (node) lines.push(`<span class="text-xs opacity-70">${escapeHtml(node)}</span>`)
+  lines.push(escapeHtml(`${dayjs(sample.time).format('MM-DD HH:mm:ss')} · ${delayText(sample.delay)}`))
+  return lines.join('<br>')
+}
+const lastNode = (id: string) => {
+  const list = siteHistory.value[id] || []
+  for (let i = list.length - 1; i >= 0; i--) if (list[i].node) return list[i].node as string
+  return ''
+}
+
+const hostOf = (url: string) => {
+  try {
+    return new URL(String(url || '').trim()).hostname
+  } catch {
+    return ''
+  }
+}
+
 const cards = computed(() =>
   activeSites.value.map((site) => {
-    const result = siteResults.value[site.id]
+    const valid = isValidSiteUrl(site.url)
+    // 只认和当前地址对得上的结果:改了地址后旧结果不再显示
+    const result = siteResults.value[site.id]?.url === site.url ? siteResults.value[site.id] : undefined
     const history = siteHistory.value[site.id] ?? []
-    const last = history.length ? history[history.length - 1] : null
-    // 这一轮测过就用这一轮的;还没测就先显示历史里最后一次
-    const ms = result ? (result.ms ?? null) : last && last.delay !== NOT_CONNECTED ? last.delay : null
-    // 这一轮测过但没通,或者还没测、历史里最后一次就是不通
-    const failed = ms === null && (Boolean(result) || last?.delay === NOT_CONNECTED)
-    const chain = result?.chain?.length ? result.chain.join(' → ') : ''
+    const last = history.length ? history[history.length - 1] : undefined
+    // undefined = 还没测过(显示 —);null = 不通
+    const ms: number | null | undefined = !valid
+      ? null
+      : result
+        ? result.ms
+        : last
+          ? last.delay === NOT_CONNECTED
+            ? null
+            : last.delay
+          : undefined
+    const brand = findBrand(site.icon)
+    const fallbackNode = lastNode(site.id)
     return {
       id: site.id,
-      name: site.name,
-      icon: site.icon,
+      label: site.name.trim() || (brand ? brandName(brand, locale.value) : '') || hostOf(site.url) || site.id,
+      iconUrl: iconUrlFor(site.icon),
       ms,
-      failed,
-      color: failed ? 'text-red-500' : ms === null ? '' : getColorForLatency(ms),
-      hint: [result?.error, chain, result?.openMs != null ? `${result.openMs}ms` : '']
-        .filter(Boolean)
-        .join(' · '),
+      loading: testingSiteIds.value.has(site.id),
+      color: typeof ms === 'number' ? getColorForLatency(ms) : '',
       bars: visibleSamples(site.id).map((sample) => ({
         height: `${Math.max(MIN_PCT, Math.round((effective(sample.delay) / maxValue.value) * 100))}%`,
         color: barColor(sample.delay),
-        title: `${dayjs(sample.time).format('MM-DD HH:mm:ss')} ${
-          sample.delay === NOT_CONNECTED ? t('latencyTimeout') : `${sample.delay}ms`
-        }${sample.node ? ` · ${sample.node}` : ''}`,
+        tip: barTip(sample, fallbackNode),
       })),
     }
   }),

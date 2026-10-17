@@ -5,6 +5,7 @@ import {
   type OpenboxSiteLatencyResult,
 } from '@/api/openbox'
 import { showNotification } from '@/helper/notification'
+import { autoConnectionCheck } from '@/store/settings'
 import { useStorage } from '@vueuse/core'
 import { computed, ref } from 'vue'
 
@@ -31,25 +32,42 @@ export const testSites = useStorage<TestSite[]>('config/test-sites', cloneDefaul
 export const resetTestSites = () => {
   testSites.value = cloneDefaultSites()
 }
-// 地址留空的站点不参与测速,也不在概览里显示
-export const activeSites = computed(() => testSites.value.filter((site) => site.url.trim() !== ''))
+// 和 v0.1.337 一样,四个位置都显示;地址不是 http(s) 的那个位置不测,直接显示「不通」
+export const activeSites = computed(() => testSites.value)
+export const isValidSiteUrl = (url: string) => {
+  try {
+    const u = new URL(String(url || '').trim())
+    return /^https?:$/.test(u.protocol) && u.hostname !== ''
+  } catch {
+    return false
+  }
+}
 
-// 打开概览页时要不要自动测一轮;关掉后只显示历史,点 ⚡ 才测
-export const autoSiteLatencyTest = useStorage('config/auto-site-latency-test', true)
+// 打开概览页时要不要自动测一轮;关掉后只显示历史,点 ⚡ 才测。
+// 和面板设置里的「自动检查连接」是同一个开关(v0.1.337 的做法)
+export const autoSiteLatencyTest = autoConnectionCheck
 
 export const siteResults = ref<Record<string, OpenboxSiteLatencyResult>>({})
 export const siteHistory = ref<OpenboxLatencyHistory>({})
 export const siteTimeoutMs = ref(5000)
 export const siteTestedAt = ref(0)
-export const siteLatencyLoading = ref(false)
+// 正在测的站点 id:点单张卡只转那一张,点 ⚡ 四张一起转
+export const testingSiteIds = ref<Set<string>>(new Set())
+export const siteLatencyLoading = computed(() => testingSiteIds.value.size > 0)
 
+// 同一条错误只弹一次,不然每次重测都刷一条
+let lastError = ''
 const notifyError = (e: unknown) => {
-  showNotification({
-    content: 'routeTestRequestFailed',
-    params: { message: e instanceof Error ? e.message : String(e) },
-    key: 'site-latency-card',
-    type: 'alert-error',
-  })
+  const message = e instanceof Error ? e.message : String(e)
+  if (message !== lastError) {
+    showNotification({
+      content: 'routeTestRequestFailed',
+      params: { message },
+      key: 'site-latency',
+      type: 'alert-error',
+    })
+  }
+  lastError = message
 }
 
 export const loadSiteHistory = async () => {
@@ -62,20 +80,22 @@ export const loadSiteHistory = async () => {
   }
 }
 
-export const runSiteLatencyTest = async () => {
-  if (siteLatencyLoading.value) return
-  const sites = activeSites.value.map(({ id, url }) => ({ id, url: url.trim() }))
-  if (!sites.length) return
-  siteLatencyLoading.value = true
+// id 为空 = 测全部;给了 id = 只测那一张卡。目标里有任何一个还在测就不重复发
+export const runSiteLatencyTest = async (id = '') => {
+  const targets = activeSites.value.filter((site) => (!id || site.id === id) && isValidSiteUrl(site.url))
+  const ids = targets.map((site) => site.id)
+  if (!ids.length || ids.some((item) => testingSiteIds.value.has(item))) return
+  testingSiteIds.value = new Set([...testingSiteIds.value, ...ids])
   try {
-    const run = await testSiteLatency(sites)
-    siteResults.value = Object.fromEntries(run.sites.map((site) => [site.id, site]))
-    siteHistory.value = run.history
-    siteTimeoutMs.value = run.timeoutMs
+    const run = await testSiteLatency(targets.map(({ id: siteId, url }) => ({ id: siteId, url })))
+    for (const site of run.sites) siteResults.value = { ...siteResults.value, [site.id]: site }
+    if (run.history) siteHistory.value = run.history
+    if (run.timeoutMs) siteTimeoutMs.value = run.timeoutMs
     siteTestedAt.value = run.testedAt
+    lastError = ''
   } catch (e) {
     notifyError(e)
   } finally {
-    siteLatencyLoading.value = false
+    testingSiteIds.value = new Set([...testingSiteIds.value].filter((item) => !ids.includes(item)))
   }
 }
