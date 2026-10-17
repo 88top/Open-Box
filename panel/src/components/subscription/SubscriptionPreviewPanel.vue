@@ -72,7 +72,7 @@
         <div class="flex flex-wrap items-center justify-between gap-2">
           <div
             role="tablist"
-            class="tabs-box tabs tabs-sm"
+            class="tabs-box tabs tabs-xs"
           >
             <a
               role="tab"

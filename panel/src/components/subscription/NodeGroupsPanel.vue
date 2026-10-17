@@ -446,7 +446,7 @@
         <div
           v-else
           role="tablist"
-          class="tabs-box tabs tabs-sm w-fit [--tab-height:1.5rem]"
+          class="tabs-box tabs tabs-xs w-fit"
         >
           <a
             role="tab"

@@ -49,7 +49,7 @@
         </button>
         <div
           role="tablist"
-          class="tabs-box tabs tabs-sm"
+          class="tabs-box tabs tabs-xs"
         >
           <a
             role="tab"

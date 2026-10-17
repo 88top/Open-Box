@@ -145,7 +145,7 @@
           <label class="text-xs font-medium">{{ $t('dnsRewriteTarget') }}</label>
           <div
             role="tablist"
-            class="tabs-box tabs tabs-sm w-fit"
+            class="tabs-box tabs tabs-xs w-fit"
           >
             <a
               role="tab"

@@ -8,7 +8,7 @@
         </div>
         <div
           role="tablist"
-          class="tabs-box tabs tabs-sm shrink-0 rounded-full"
+          class="tabs-box tabs tabs-xs shrink-0 rounded-full"
         >
           <a
             v-for="m in MODES"

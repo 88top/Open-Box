@@ -36,7 +36,7 @@
           <span class="text-xs font-medium">{{ $t('dnsRegionLabel') }}</span>
           <div
             role="tablist"
-            class="tabs-box tabs tabs-sm w-fit"
+            class="tabs-box tabs tabs-xs w-fit"
           >
             <a
               v-for="r in REGIONS"
@@ -191,7 +191,7 @@
           <label class="text-xs font-medium">{{ $t('dnsUpstreamSide') }}</label>
           <div
             role="tablist"
-            class="tabs-box tabs tabs-sm w-fit"
+            class="tabs-box tabs tabs-xs w-fit"
           >
             <a
               v-for="s in SIDES"
@@ -209,7 +209,7 @@
         <div class="flex flex-col gap-1">
           <div
             role="tablist"
-            class="tabs-box tabs tabs-sm w-fit"
+            class="tabs-box tabs tabs-xs w-fit"
           >
             <a
               role="tab"
