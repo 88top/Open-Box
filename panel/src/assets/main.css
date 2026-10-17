@@ -233,10 +233,7 @@ html.apple-mobile-ui {
   border-radius: var(--app-radius-field, 0.5rem) !important;
 }
 
-#app-content .proxy-node-card {
-  border-radius: var(--app-radius-box, 1rem) !important;
-}
-
+#app-content .proxy-node-card,
 #app-content .connection-table-shell,
 #app-content .domain-penetration-table-card {
   border-radius: var(--app-radius-panel, 1.25rem) !important;

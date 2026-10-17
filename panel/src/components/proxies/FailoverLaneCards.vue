@@ -23,7 +23,7 @@
       </div>
       <div
         v-else
-        class="bg-base-200 border-base-content/[0.08] flex min-w-0 flex-col items-start gap-2 rounded-md border p-2 opacity-60"
+        class="bg-base-200 border-base-content/[0.08] flex min-w-0 flex-col items-start gap-2 rounded-lg border p-3 opacity-60"
       >
         <span class="flex w-full min-w-0 items-center truncate text-sm">
           <ProxyIcon

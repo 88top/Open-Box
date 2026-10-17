@@ -3,10 +3,11 @@
     ref="cardRef"
     :class="
       twMerge(
-        'proxy-node-card bg-base-200 border-base-content/[0.08] flex flex-col items-start rounded-md border transition-colors duration-150',
-        selectable ? 'cursor-pointer' : 'cursor-default',
+        'proxy-node-card bg-base-200 border-base-content/[0.08] flex flex-col items-start rounded-md border transition-[color,background-color,border-color,scale] duration-150 ease-out',
+        active && 'proxy-node-card-active',
+        selectable ? 'cursor-pointer active:scale-[0.98]' : 'cursor-default',
         hoverClass,
-        isSmallCard ? 'gap-1 p-1' : 'gap-2 p-2',
+        isSmallCard ? 'gap-1 px-2.5 py-1.5' : 'gap-2 p-3',
         latencyTipAnimationClass,
       )
     "
