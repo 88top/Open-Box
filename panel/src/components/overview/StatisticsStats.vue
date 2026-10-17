@@ -21,8 +21,8 @@ const props = defineProps<{
 
 const classMap = {
   overview: {
-    list: 'grid grid-cols-2 gap-2 rounded-xl border border-base-300/60 bg-base-100 px-4 py-2 lg:grid-cols-6',
-    item: 'flex h-12 flex-col items-start justify-center lg:gap-0.5 lg:items-center',
+    list: 'grid grid-flow-col grid-cols-3 grid-rows-2 gap-2 rounded-xl border border-base-300/60 bg-base-100 p-3 lg:grid-flow-row lg:grid-cols-6 lg:grid-rows-1',
+    item: 'flex h-12 flex-col items-center justify-center lg:gap-0.5',
     label: 'text-xs text-base-content/70',
     value: 'text-lg lg:text-xl font-bold',
   },

@@ -2,18 +2,22 @@
   <div
     :class="
       title
-        ? 'relative flex h-36 w-full flex-col overflow-hidden rounded-xl border border-base-300/60 bg-base-100 p-2'
+        ? 'relative flex w-full flex-col rounded-xl border border-base-300/60 bg-base-100 p-3'
         : 'relative h-28 w-full overflow-hidden'
     "
   >
-    <!-- 带标题:标题在左上、暂停键在右上,不画图例(概览页四张图用) -->
+    <!-- 带标题(概览页四张图,对齐 v0.1.337):标题在左上、暂停键在右上,不画图例。
+         暂停键是 ghost 按钮,图标颜色跟着这一行的 text-base-content/60 走(比正文色淡一档) -->
     <div
       v-if="title"
-      class="flex h-6 shrink-0 items-center justify-between px-1"
+      class="text-base-content/60 flex items-center justify-between text-xs"
     >
-      <span class="text-base-content/70 truncate text-xs">{{ title }}</span>
+      <span>{{ title }}</span>
       <button
-        class="btn btn-ghost btn-xs btn-circle"
+        type="button"
+        class="btn btn-ghost btn-square btn-xs -mr-1 -my-1"
+        :aria-label="$t(isPaused ? 'chartResume' : 'chartPause')"
+        v-tip="$t(isPaused ? 'chartResume' : 'chartPause')"
         @click="isPaused = !isPaused"
       >
         <component
@@ -23,8 +27,18 @@
       </button>
     </div>
     <div
+      v-if="title"
+      class="mt-2 flex flex-1 flex-col overflow-hidden rounded-b-[var(--app-radius-panel,1.25rem)]"
+    >
+      <div
+        ref="chart"
+        class="h-[100px] w-full"
+      />
+    </div>
+    <div
+      v-else
       ref="chart"
-      :class="title ? 'min-h-0 w-full flex-1' : 'h-full w-full'"
+      class="h-full w-full"
     />
     <span
       class="border-b-primary/30 border-t-primary/60 border-l-info/30 border-r-info/60 text-base-content/10 bg-base-100/70 hidden"
@@ -107,7 +121,12 @@ const updateFontFamily = () => {
   fontFamily = baseColorStyle.fontFamily
 }
 
+// 图太窄(< 240px)时纵轴标签缩成 10px、左边留 40px,和 v0.1.337 一样
+const { width: chartWidth } = useElementSize(chart)
+
 const options = computed(() => {
+  const narrow = chartWidth.value > 0 && chartWidth.value < 240
+  const labelSpace = narrow ? 40 : 52
   return {
     // 画布本身已经离卡片边 8px(卡片 p-2),画布里的东西一律贴边:图例不留内边距、绘图区右边不留、
     // 纵轴标签从画布最左边开始。这样上下左右到卡片边都是 8px。
@@ -115,6 +134,7 @@ const options = computed(() => {
       show: !props.title,
       bottom: 0,
       padding: 0,
+      left: narrow ? 0 : 'center',
       data: props.data.map((item) => item.name),
       textStyle: {
         color: colorSet.baseContent,
@@ -122,12 +142,12 @@ const options = computed(() => {
       },
     },
     grid: {
-      left: 60,
+      left: labelSpace + 8,
       // 绘图区上边距 8px,和卡片内边距一个数;最上面那个刻度标签半个字高在这 8px 里放得下
       top: 8,
       right: 0,
       // 图例没了 5px 内边距,绘图区和图例之间的间距保持原样
-      bottom: props.title ? 4 : 20,
+      bottom: props.title ? 0 : 20,
     },
     tooltip: {
       show: props.tooltip !== false,
@@ -168,10 +188,11 @@ const options = computed(() => {
         // 带标题的卡片不画最底下那个 0 刻度,曲线直接贴卡片底边(和 v0.1.308 一致)
         showMinLabel: props.title ? false : null,
         // 标签锚点在 grid.left - 8 = 52,往左推满 52 就贴到画布左边
-        padding: [0, 0, 0, -52],
+        padding: [0, 0, 0, -labelSpace],
         formatter: props.labelFormatter,
         color: colorSet.baseContent,
         fontFamily,
+        ...(narrow ? { fontSize: 10 } : {}),
       },
     },
     series: props.data.map((item, index) => {
@@ -233,8 +254,7 @@ onMounted(() => {
     myChart?.setOption(options.value)
   })
 
-  const { width } = useElementSize(chart)
-  watch(width, resize)
+  watch(chartWidth, resize)
 
   watch(isWindowResizing, (resizing) => {
     if (resizing || isPaused.value) {

@@ -2,14 +2,10 @@
   <!-- 每日流量:后端按连接采样记下每天的入口/出口字节数(server/system/traffic-collector.mjs),
        这里画成月视图柱状图;点一根柱子下钻到当天按终端设备、节点、访问目标的明细,每一行再能点开看它的构成。 -->
   <div class="card w-full">
-    <div class="flex flex-wrap items-center gap-2 px-4 pt-4">
-      <div class="min-w-0">
+    <div class="flex flex-wrap items-center gap-2 px-4 pt-4 max-md:px-3 max-md:pt-3">
+      <div class="flex min-w-0 flex-col gap-1">
         <div class="flex flex-wrap items-center gap-2">
           <h2 class="text-base font-semibold">{{ $t('trafficInsight') }}</h2>
-          <span
-            v-if="loading"
-            class="loading loading-spinner loading-xs"
-          />
           <!-- 统计直连流量:关掉后服务端把走直连出站的那部分从总量 / 曲线 / 列表里扣掉,库里数据不动 -->
           <label
             class="text-base-content/70 flex cursor-pointer items-center gap-1.5 text-xs font-normal"
@@ -22,6 +18,11 @@
               class="toggle toggle-xs toggle-primary"
             >
           </label>
+          <!-- 转圈位置一直占着(不测时 invisible),标题行高度不会因为它出现 / 消失而跳 -->
+          <span
+            class="loading loading-spinner loading-xs"
+            :class="!loading && 'invisible'"
+          />
         </div>
         <p v-if="error" class="text-error text-xs">{{ error }}</p>
         <i18n-t
@@ -84,7 +85,7 @@
            滚动容器在 Windows 上会冒出横竖两条占位的滚动条,很难看 -->
       <div
         v-if="days.length"
-        class="border-base-300/60 bg-base-100 relative rounded-xl border px-2 pt-6 pb-2"
+        class="border-base-300/60 bg-base-100 relative rounded-xl border px-2 pt-6 pb-3"
       >
         <div class="relative">
           <div

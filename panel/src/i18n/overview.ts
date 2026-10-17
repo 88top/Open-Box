@@ -12,6 +12,8 @@ const overviewMessages = {
     statUploadTotal: '出站流量',
     trafficInsight: '流量洞察',
     siteUnreachable: '不通',
+    chartPause: '暂停刷新',
+    chartResume: '继续刷新',
   },
   [LANG.ZH_TW]: {
     overviewPanelTitle: '面板概覽',
@@ -23,6 +25,8 @@ const overviewMessages = {
     statUploadTotal: '出站流量',
     trafficInsight: '流量洞察',
     siteUnreachable: '不通',
+    chartPause: '暫停更新',
+    chartResume: '繼續更新',
   },
   [LANG.EN_US]: {
     overviewPanelTitle: 'Panel overview',
@@ -34,6 +38,8 @@ const overviewMessages = {
     statUploadTotal: 'Outbound traffic',
     trafficInsight: 'Traffic insights',
     siteUnreachable: 'Unreachable',
+    chartPause: 'Pause updates',
+    chartResume: 'Resume updates',
   },
 }
 
