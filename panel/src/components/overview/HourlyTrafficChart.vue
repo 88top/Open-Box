@@ -7,10 +7,10 @@
        哪个小时就换成哪个小时,离开又回到峰值;悬停时还在光标旁弹「时段 + 进站 / 出站」的浮层。
        点某个小时会告诉父组件(select),下面的明细就只看那个小时;选中的小时画一根虚线。 -->
   <div class="border-base-300/60 bg-base-100 flex flex-col gap-2 rounded-xl border p-2">
-    <div class="relative h-44 w-full">
+    <div class="relative h-[184px] w-full">
       <div
         ref="chartEl"
-        class="h-full w-full cursor-pointer"
+        class="absolute inset-1 cursor-pointer"
       />
       <!-- 颜色探针:进站用 primary、出站用 secondary,和柱子一致;浮层底色和概览其他图表一样是
            base-100/70;字体跟着面板 -->
