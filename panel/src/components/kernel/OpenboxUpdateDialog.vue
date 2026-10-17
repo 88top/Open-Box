@@ -5,8 +5,9 @@
     v-model="updateDialogOpen"
     :title="$t('obUpdateDialogTitle')"
     box-class="w-full max-w-2xl"
+    content-class="flex flex-col overflow-hidden!"
   >
-    <div class="flex flex-col gap-3 text-sm">
+    <div class="flex min-h-0 flex-col gap-3 text-sm">
       <div class="flex items-center gap-2">
         <span
           v-if="updateRunning"
@@ -26,27 +27,27 @@
       <p class="text-base-content/60 text-xs">{{ $t('obUpdateDialogHint') }}</p>
       <pre
         v-if="updateInfo?.logTail"
-        class="bg-base-200/60 max-h-64 overflow-auto rounded-lg p-2 font-mono text-xs whitespace-pre-wrap"
+        class="bg-base-200/60 max-h-64 min-h-0 overflow-auto rounded-lg p-2 font-mono text-xs whitespace-pre-wrap"
       >{{ updateInfo.logTail }}</pre>
-      <div class="flex justify-end gap-2">
-        <button
-          v-if="updateRunning"
-          type="button"
-          class="btn btn-sm"
-          :disabled="!updateCancellable"
-          @click="cancelRunningUpdate"
-        >
-          {{ $t('cancel') }}
-        </button>
-        <button
-          type="button"
-          class="btn btn-sm"
-          @click="updateDialogOpen = false"
-        >
-          {{ $t('close') }}
-        </button>
-      </div>
     </div>
+    <template #footer>
+      <button
+        v-if="updateRunning"
+        type="button"
+        class="btn btn-sm"
+        :disabled="!updateCancellable"
+        @click="cancelRunningUpdate"
+      >
+        {{ $t('cancel') }}
+      </button>
+      <button
+        type="button"
+        class="btn btn-sm"
+        @click="updateDialogOpen = false"
+      >
+        {{ $t(updateRunning ? 'obUpdateDialogHide' : 'close') }}
+      </button>
+    </template>
   </DialogWrapper>
 </template>
 

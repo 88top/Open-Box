@@ -7,32 +7,13 @@
         <p class="text-base-content/60 text-xs">{{ $t('obUpdateDescription') }}</p>
       </div>
 
-      <!-- 版本一行:当前 / 最新 -->
-      <div
-        v-if="!embedded || latest"
-        class="flex flex-wrap items-center gap-x-4 gap-y-1"
-      >
-        <template v-if="!embedded">
-          <span class="text-base-content/70">{{ $t('obUpdateCurrent') }}:</span>
-          <span class="font-mono">{{ updateInfo?.version || '—' }}</span>
-        </template>
-        <template v-if="latest">
-          <span class="text-base-content/70">{{ $t('obUpdateLatest') }}:</span>
-          <span class="font-mono">{{ latest.latest }}</span>
-          <StatusBadge
-            :on="!latest.hasUpdate"
-            :on-text="$t('obUpdateUpToDate')"
-            :off-text="$t('obUpdateAvailable')"
-          />
-        </template>
-      </div>
-
-      <!-- 操作:[通道] [一个按钮]。按钮按状态变身:检查更新 → 探到新版就变成 立即更新 →
-           升级进行中变成 查看进度。没探到新版按钮不变,只弹一条「已是最新」。 -->
+      <!-- 一行:[通道] [检查更新] 最新版本 vX [已是最新] 安装时通道。检查更新探到新版就弹确认框
+           (带更新日志),点「确定更新」才真正升级;升级进行中按钮变成「查看进度」。 -->
       <div class="flex flex-wrap items-center gap-2">
         <select
           v-model="channel"
-          class="select select-sm"
+          v-tip="$t('obUpdateDescription')"
+          class="select select-sm w-auto"
           :disabled="updateRunning"
         >
           <option value="auto">{{ $t('obUpdateChannelAuto') }}</option>
@@ -45,21 +26,8 @@
           class="btn btn-sm"
           @click="updateDialogOpen = true"
         >
-          <span class="loading loading-spinner loading-xs" />
+          <span class="loading loading-spinner loading-xs loading-inline" />
           {{ $t('obUpdateViewProgress') }}
-        </button>
-        <button
-          v-else-if="latest?.hasUpdate"
-          type="button"
-          class="btn btn-primary btn-sm"
-          :disabled="updateStarting"
-          @click="start"
-        >
-          <span
-            v-if="updateStarting"
-            class="loading loading-spinner loading-xs"
-          />
-          {{ $t('obUpdateNow') }}
         </button>
         <button
           v-else
@@ -74,11 +42,35 @@
           />
           {{ $t('obUpdateCheck') }}
         </button>
+        <template v-if="!embedded">
+          <span class="text-base-content/70">{{ $t('obUpdateCurrent') }}:</span>
+          <span class="font-mono">{{ updateInfo?.version || '—' }}</span>
+        </template>
+        <template v-if="latest">
+          <span class="text-base-content/70">{{ $t('obUpdateLatest') }}:</span>
+          <span class="font-mono">{{ latest.latest }}</span>
+          <StatusBadge
+            :on="!latest.hasUpdate"
+            :on-text="$t('obUpdateUpToDate')"
+            :off-text="$t('obUpdateAvailable')"
+          />
+        </template>
         <span
           v-if="updateInfo?.channel"
           class="text-base-content/50 text-xs"
         >{{ $t('obUpdateInstalledChannel', { channel: updateInfo!.channel.mode === 'mirror' ? $t('obUpdateChannelMirror') : $t('obUpdateChannelDirect') }) }}</span>
       </div>
+
+      <OpenboxUpdateConfirmDialog
+        v-model="confirmOpen"
+        :current="latest?.current || updateInfo?.version || ''"
+        :latest="latest?.latest || ''"
+        :loading="notesLoading"
+        :note="note"
+        :url="notesUrl"
+        :starting="updateStarting"
+        @confirm="confirmUpdate"
+      />
 
       <div class="bg-base-content/10 h-px" />
 
@@ -135,9 +127,10 @@
 </template>
 
 <script setup lang="ts">
-import type { OpenboxProfile, OpenboxUpdateChannel } from '@/api/openbox'
-import { checkUpdate } from '@/api/openbox'
+import type { OpenboxProfile, OpenboxUpdateChannel, OpenboxUpdateNote } from '@/api/openbox'
+import { checkUpdate, fetchUpdateNotes } from '@/api/openbox'
 import StatusBadge from '@/components/common/StatusBadge.vue'
+import OpenboxUpdateConfirmDialog from '@/components/kernel/OpenboxUpdateConfirmDialog.vue'
 // 升级进度是全局的(面板和内核各重启一次,用户可能待在任何页面),状态和弹窗都在
 // composables/openboxUpdate 这个单例里,弹窗由 App.vue 挂在根上;这张卡只管发起和显示版本。
 import {
@@ -157,7 +150,7 @@ const props = defineProps<{
   embedded?: boolean
 }>()
 
-const latest = ref<{ latest: string; hasUpdate: boolean } | null>(null)
+const latest = ref<{ current: string; latest: string; hasUpdate: boolean } | null>(null)
 const checking = ref(false)
 const plan = computed(() => ({
   auto: props.profile.updates?.openbox?.auto === true,
@@ -182,16 +175,43 @@ watch(channel, async (v) => {
   }
 })
 
+// 确认弹窗:探到新版就打开,更新日志按版本只取一次(取失败下次再试)
+const confirmOpen = ref(false)
+const note = ref<OpenboxUpdateNote | null>(null)
+const notesLoading = ref(false)
+const notesUrl = ref('https://github.com/timeflysoon/Open-Box/releases')
+let notesFor = ''
+
+const openConfirm = async () => {
+  const version = latest.value?.latest || ''
+  if (!version) return
+  confirmOpen.value = true
+  if (notesFor === version) return
+  notesFor = version
+  notesLoading.value = true
+  note.value = null
+  try {
+    const r = await fetchUpdateNotes(version)
+    note.value = r.note
+    if (r.url) notesUrl.value = r.url
+  } catch {
+    notesFor = ''
+  } finally {
+    notesLoading.value = false
+  }
+}
+
+const confirmUpdate = async () => {
+  if (await startUpdate(channel.value)) confirmOpen.value = false
+}
+
 const check = async () => {
   checking.value = true
   try {
     const r = await checkUpdate()
     latest.value = r
-    showNotification({
-      content: r.hasUpdate ? 'obUpdateAvailableToast' : 'obUpdateUpToDateToast',
-      params: { latest: r.latest },
-      type: r.hasUpdate ? 'alert-info' : 'alert-success',
-    })
+    if (r.hasUpdate) void openConfirm()
+    else showNotification({ content: 'obUpdateUpToDateToast', params: { latest: r.latest }, type: 'alert-success' })
   } catch (err) {
     showNotification({
       content: 'obUpdateCheckFailed',
@@ -202,8 +222,6 @@ const check = async () => {
     checking.value = false
   }
 }
-
-const start = () => startUpdate(channel.value)
 
 const savePlan = async (patch: Partial<{ auto: boolean; hour: number; days: number; channel: OpenboxUpdateChannel }>) => {
   try {
