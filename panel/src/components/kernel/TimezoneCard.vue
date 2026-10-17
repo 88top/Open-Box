@@ -11,65 +11,72 @@
         class="loading loading-spinner loading-xs"
       />
       <template v-else-if="state">
-        <!-- 一个下拉:点开有搜索框,选中即生效 -->
-        <div
-          ref="rootEl"
-          class="relative w-full max-w-md"
-        >
-          <button
-            type="button"
-            class="input input-sm flex h-10 w-full items-center justify-between gap-2 rounded-full px-4 text-left"
-            :disabled="saving"
-            :aria-expanded="open"
-            @click="toggle"
-          >
-            <span class="truncate font-mono">{{ state.zone || $t('timezoneUnknown') }}</span>
-            <span class="text-base-content/60 flex shrink-0 items-center gap-1 font-mono text-xs">
-              <span v-if="state.offset">UTC{{ state.offset }}</span>
-              <span
-                v-if="saving"
-                class="loading loading-spinner loading-xs"
-              />
-              <ChevronDownIcon class="h-4 w-4" />
-            </span>
-          </button>
+        <!-- 一个下拉:点开有搜索框,选中即生效。外框宽度、触发框高度与字号和 v0.1.337 一致
+             (max-w-sm、input-sm、font-mono text-xs;保存中的转圈放在框外右侧) -->
+        <div class="flex flex-wrap items-center gap-2">
           <div
-            v-if="open"
-            class="bg-base-100 border-base-300 absolute z-30 mt-1 w-full overflow-hidden rounded-2xl border shadow-lg"
+            ref="rootEl"
+            class="relative w-full max-w-sm"
           >
-            <div class="p-2">
-              <input
-                ref="searchEl"
-                v-model.trim="keyword"
-                type="search"
-                class="input input-sm w-full"
-                :placeholder="$t('timezoneSearch')"
-                @keydown.esc="open = false"
-              />
-            </div>
-            <ul class="max-h-64 overflow-y-auto pb-1">
-              <li
-                v-for="zone in filtered"
-                :key="zone"
-              >
-                <button
-                  type="button"
-                  class="hover:bg-base-200 flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm"
-                  :class="{ 'bg-base-200 font-medium': zone === state.zone }"
-                  @click="pick(zone)"
+            <button
+              type="button"
+              class="input input-sm hover:border-base-content/30 flex w-full cursor-pointer items-center gap-1.5 font-mono text-xs"
+              :disabled="saving"
+              :aria-expanded="open"
+              @click="toggle"
+            >
+              <span
+                class="min-w-0 flex-1 truncate text-left"
+                :class="{ 'text-base-content/40': !state.zone }"
+              >{{ state.zone || $t('timezoneUnknown') }}</span>
+              <span
+                v-if="state.offset"
+                class="text-base-content/50 shrink-0"
+              >UTC{{ state.offset }}</span>
+              <ChevronDownIcon class="text-base-content/40 h-3.5 w-3.5 shrink-0" />
+            </button>
+            <div
+              v-if="open"
+              class="bg-base-100 border-base-300 absolute z-30 mt-1 w-full overflow-hidden rounded-2xl border shadow-lg"
+            >
+              <div class="p-2">
+                <input
+                  ref="searchEl"
+                  v-model.trim="keyword"
+                  type="search"
+                  class="input input-sm w-full"
+                  :placeholder="$t('timezoneSearch')"
+                  @keydown.esc="open = false"
+                />
+              </div>
+              <ul class="max-h-64 overflow-y-auto pb-1">
+                <li
+                  v-for="zone in filtered"
+                  :key="zone"
                 >
-                  <span class="truncate">{{ label(zone) }}</span>
-                  <span class="text-base-content/50 shrink-0 font-mono text-xs">{{ zoneOffset(zone) }}</span>
-                </button>
-              </li>
-              <li
-                v-if="!filtered.length"
-                class="text-base-content/50 px-3 py-2 text-xs"
-              >
-                {{ $t('timezoneNoMatch') }}
-              </li>
-            </ul>
+                  <button
+                    type="button"
+                    class="hover:bg-base-200 flex w-full items-center justify-between gap-2 px-3 py-1.5 text-left text-sm"
+                    :class="{ 'bg-base-200 font-medium': zone === state.zone }"
+                    @click="pick(zone)"
+                  >
+                    <span class="truncate">{{ label(zone) }}</span>
+                    <span class="text-base-content/50 shrink-0 font-mono text-xs">{{ zoneOffset(zone) }}</span>
+                  </button>
+                </li>
+                <li
+                  v-if="!filtered.length"
+                  class="text-base-content/50 px-3 py-2 text-xs"
+                >
+                  {{ $t('timezoneNoMatch') }}
+                </li>
+              </ul>
+            </div>
           </div>
+          <span
+            v-if="saving"
+            class="loading loading-spinner loading-xs"
+          />
         </div>
         <p
           v-if="state.local"

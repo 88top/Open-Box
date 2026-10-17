@@ -5,14 +5,15 @@
     <div class="card-body gap-3 p-4">
       <div>
         <h2 class="text-base font-semibold">{{ $t('diagnosticsTitle') }}</h2>
-        <!-- 说明里的「GitHub issue」做成指向仓库 issue 页的绿色链接(按文案里出现的位置切开,各语言通用) -->
+        <!-- 说明里的「GitHub issue」做成指向仓库 issue 页的链接(主题色混 30% 正文色、半粗体,与 v0.1.337 一致)(按文案里出现的位置切开,各语言通用) -->
         <p class="text-base-content/60 text-xs">
           {{ descParts[0] }}<a
             v-if="descParts[1]"
-            href="https://github.com/liandu2024/Open-Box/issues"
+            href="https://github.com/timeflysoon/Open-Box/issues"
             target="_blank"
             rel="noopener noreferrer"
-            class="text-success font-medium hover:underline"
+            class="link link-hover font-semibold"
+            style="color: color-mix(in srgb, var(--color-primary) 70%, var(--color-base-content) 30%)"
           >{{ descParts[1] }}</a>{{ descParts[2] }}
         </p>
       </div>
