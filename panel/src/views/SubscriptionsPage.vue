@@ -97,6 +97,7 @@
           <template #item="{ element: sub }">
             <SubscriptionCard
               :subscription="sub"
+              :max-total="maxTotal"
               :refreshing="refreshingId === sub.id"
               deletable
               sortable
@@ -195,6 +196,11 @@ const pageTab = computed(() => props.tab ?? 'subs')
 const subscriptions = ref<OpenboxSubscription[]>([])
 const shares = ref<OpenboxSubscriptionShare[]>([])
 const loading = ref(false)
+
+// 卡片右侧流量进度条的参照:所有订阅里最大的总流量,最大的那条满宽,其余按比例缩短
+const maxTotal = computed(() =>
+  Math.max(0, ...subscriptions.value.map((s) => (s.usage?.total && s.usage.total > 0 ? s.usage.total : 0))),
+)
 
 const loadSubscriptions = async () => {
   loading.value = true

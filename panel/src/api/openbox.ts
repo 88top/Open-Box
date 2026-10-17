@@ -304,6 +304,9 @@ export interface OpenboxSubscriptionAutoUpdate {
   enabled: boolean
   days: number
   hour: number
+  // 'hours' = 每隔 N 小时更新一次(用 hours);没有这个字段 = 按天、按钟点更新(用 days / hour)
+  mode?: string
+  hours?: number
 }
 
 // url 是 https:// 的 DoH 地址;地址里是域名时 bootstrap 必填(用来解析这个域名的 DNS,IP)
@@ -327,6 +330,13 @@ export interface OpenboxSubscription {
   nodeDns?: OpenboxSubscriptionNodeDns | null
   createdAt: number
   updatedAt: number
+  // 机场在订阅响应头(subscription-userinfo)里给的流量用量 / 到期时间;字段都可能缺(null)
+  usage?: {
+    upload: number | null
+    download: number | null
+    total: number | null
+    expire: number | null
+  } | null
 }
 
 export interface OpenboxSubscriptionShare {
